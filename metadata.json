@@ -1,0 +1,7 @@
+{
+  "name": "Sakura Wedding Invitation",
+  "description": "An elegant wedding invitation landing page featuring a falling sakura petal animation, interactive ribbon-untie and gate-opening letter reveal, and romantic details.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
