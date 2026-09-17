@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, useScroll, useTransform } from 'motion/react';
 import {
   Calendar,
   Clock,
@@ -19,9 +19,17 @@ import {
   Wine,
   Church,
   UtensilsCrossed,
-  PartyPopper
+  PartyPopper,
+  Loader2,
+  Check,
+  RefreshCw,
 } from 'lucide-react';
-import { WeddingConfig, RSVPData, ScheduleEvent, LoveMilestone } from '../types';
+import { WeddingConfig, RSVPData, ScheduleEvent } from '../types';
+import {
+  fetchWishesFromGoogleSheet,
+  normalizeGoogleSheetUrl,
+  DEFAULT_GOOGLE_SHEET_URL,
+} from '../utils/googleSheetSync';
 
 interface InvitationContentProps {
   config: WeddingConfig;
@@ -35,17 +43,32 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
   onReplayEnvelope,
   onShowerPetals,
 }) => {
+  // Venue Image Card Parallax & Blur on Scroll
+  const venueImageContainerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress: venueScrollProgress } = useScroll({
+    target: venueImageContainerRef,
+    offset: ['start end', 'end start'],
+  });
+
+  const venueParallaxY = useTransform(venueScrollProgress, [0, 1], ['-16%', '16%']);
+  const venueParallaxScale = useTransform(venueScrollProgress, [0, 0.5, 1], [1.18, 1.06, 1.18]);
+  const venueBlur = useTransform(
+    venueScrollProgress,
+    [0, 0.35, 0.7, 1],
+    ['blur(0px)', 'blur(0px)', 'blur(2.5px)', 'blur(5px)']
+  );
+
   // Countdown Timer State
   const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number }>({
-    days: 120,
-    hours: 14,
-    minutes: 32,
-    seconds: 45,
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
   });
 
   useEffect(() => {
-    // Target date: October 24, 2026
-    const targetDate = new Date('2026-10-24T13:00:00');
+    // Target date: October 17, 2026 at 3:00 PM (15:00 PKT)
+    const targetDate = new Date('2026-10-17T15:00:00');
 
     const updateCountdown = () => {
       const now = new Date();
@@ -70,49 +93,87 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
     name: '',
     attending: 'yes' as 'yes' | 'no',
     guestCount: 1,
-    dietary: 'None',
+    attireChecked: true,
     message: '',
   });
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [rsvpSubmitted, setRsvpSubmitted] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState(false);
 
-  // Live Wishes Wall
-  const [wishes, setWishes] = useState<RSVPData[]>([
-    {
-      id: '1',
-      name: 'Julian & Claire Montgomery',
-      attending: 'yes',
-      guestCount: 2,
-      dietary: 'Vegetarian',
-      message: 'May your love blossom as beautifully as cherry blossoms in springtime! Cannot wait to celebrate with you both.',
-      timestamp: '2 hours ago',
-    },
-    {
-      id: '2',
-      name: 'Aunt Vivienne & Uncle Marcus',
-      attending: 'yes',
-      guestCount: 2,
-      dietary: 'None',
-      message: 'So overjoyed for this next chapter. You two are truly made for each other. Sending all our heartfelt blessings!',
-      timestamp: 'Yesterday',
-    },
-    {
-      id: '3',
-      name: 'Sophia Chen',
-      attending: 'yes',
-      guestCount: 1,
-      dietary: 'Gluten-Free',
-      message: 'The most romantic couple! Counting down the days until the magical Kyoto ceremony.',
-      timestamp: '2 days ago',
-    },
-  ]);
-
-  const [wishLikes, setWishLikes] = useState<{ [id: string]: number }>({
-    '1': 14,
-    '2': 21,
-    '3': 9,
+  // Live Wishes Wall & Local Submissions Persistence
+  const [localSubmissions, setLocalSubmissions] = useState<RSVPData[]>(() => {
+    try {
+      const saved = localStorage.getItem('wedding_local_submissions');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
   });
+
+  const [wishes, setWishes] = useState<RSVPData[]>(() => {
+    try {
+      const saved = localStorage.getItem('wedding_local_submissions');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [wishLikes, setWishLikes] = useState<{ [id: string]: number }>({});
+  const [isSyncingSheet, setIsSyncingSheet] = useState(false);
+
+  const syncFromSheet = async () => {
+    if (!DEFAULT_GOOGLE_SHEET_URL) return;
+
+    setIsSyncingSheet(true);
+    try {
+      const sheetWishes = await fetchWishesFromGoogleSheet(DEFAULT_GOOGLE_SHEET_URL);
+
+      // Read current local submissions (to prevent losing newly submitted responses while Google CDN updates)
+      let currentLocal: RSVPData[] = [];
+      try {
+        const saved = localStorage.getItem('wedding_local_submissions');
+        if (saved) currentLocal = JSON.parse(saved);
+      } catch {}
+
+      // Keep only local submissions that haven't appeared in the Google Sheet yet
+      const stillPendingLocal: RSVPData[] = [];
+      currentLocal.forEach((localItem) => {
+        const alreadyInSheet = sheetWishes.some(
+          (sw) =>
+            sw.name.trim().toLowerCase() === localItem.name.trim().toLowerCase() &&
+            sw.message.trim().toLowerCase() === localItem.message.trim().toLowerCase()
+        );
+        if (!alreadyInSheet) {
+          stillPendingLocal.push(localItem);
+        }
+      });
+
+      // Update storage so we don't accumulate outdated pending copies
+      try {
+        localStorage.setItem('wedding_local_submissions', JSON.stringify(stillPendingLocal));
+      } catch {}
+      setLocalSubmissions(stillPendingLocal);
+
+      // Merge: Unmatched local submissions on top, followed by official sheet entries
+      const merged = [...stillPendingLocal, ...sheetWishes];
+      setWishes(merged);
+    } catch (err: any) {
+      console.warn('Google Sheet fetch error:', err);
+    } finally {
+      setIsSyncingSheet(false);
+    }
+  };
+
+  useEffect(() => {
+    syncFromSheet();
+    const interval = setInterval(() => {
+      syncFromSheet();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLikeWish = (id: string) => {
     setWishLikes((prev) => ({
@@ -122,23 +183,85 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
     onShowerPetals();
   };
 
-  const handleRsvpSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!rsvpForm.name.trim()) return;
+  const handleRsvpSubmit = async (e: React.FormEvent) => {
+    if (!rsvpForm.name.trim()) {
+      e.preventDefault();
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const attireText = rsvpForm.attireChecked
+      ? 'White & Beige Theme Confirmed'
+      : 'White & Beige Theme';
+
+    const attendanceText =
+      rsvpForm.attending === 'yes' ? 'Joyfully Accept' : 'Regretfully Decline';
+
+    const guestsText =
+      rsvpForm.attending === 'yes'
+        ? `${rsvpForm.guestCount} ${rsvpForm.guestCount === 1 ? 'Guest' : 'Guests'}`
+        : '0 Guests';
+
+    const messageText =
+      rsvpForm.message.trim() ||
+      'Sending our deepest love and warmest prayers on your blessed wedding day!';
+
+    // Direct background sync with Google Forms action endpoint
+    try {
+      const formData = new URLSearchParams();
+      formData.append('entry.1411766687', rsvpForm.name.trim());
+      formData.append('entry.1837360552', attireText);
+      formData.append('entry.1641608483', attendanceText);
+      formData.append('entry.459360220', guestsText);
+      formData.append('entry.134681084', attireText);
+      formData.append('entry.2045044766', messageText);
+
+      fetch(
+        'https://docs.google.com/forms/u/0/d/e/1FAIpQLSc1XEEIKvYaoZqRTjW-uWKcxZU3OVB1Z3OwTSpXjpj26kPU4Q/formResponse',
+        {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: formData.toString(),
+        }
+      ).catch(() => {});
+    } catch {
+      // Background catch
+    }
 
     const newWish: RSVPData = {
-      id: Date.now().toString(),
-      name: rsvpForm.name,
+      id: `local-${Date.now()}-${rsvpForm.name.trim().toLowerCase().replace(/\s+/g, '')}`,
+      name: rsvpForm.name.trim(),
       attending: rsvpForm.attending,
-      guestCount: rsvpForm.guestCount,
-      dietary: rsvpForm.dietary,
-      message: rsvpForm.message || 'Sending our deepest love and warmest wishes on your wedding day!',
+      guestCount: rsvpForm.attending === 'yes' ? rsvpForm.guestCount : 0,
+      dietary: attireText,
+      message: messageText,
       timestamp: 'Just now',
     };
 
-    setWishes([newWish, ...wishes]);
-    setRsvpSubmitted(true);
-    onShowerPetals();
+    // Save to local submissions immediately so it will NEVER vanish
+    const updatedLocal = [newWish, ...localSubmissions];
+    setLocalSubmissions(updatedLocal);
+    try {
+      localStorage.setItem('wedding_local_submissions', JSON.stringify(updatedLocal));
+    } catch {}
+
+    // Immediately display at the top of wishes
+    setWishes((prev) => [newWish, ...prev.filter((w) => w.id !== newWish.id)]);
+
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setRsvpSubmitted(true);
+      onShowerPetals();
+
+      // Trigger re-sync in background after 4 seconds
+      setTimeout(() => {
+        syncFromSheet();
+      }, 4000);
+    }, 700);
   };
 
   const handleShare = () => {
@@ -149,75 +272,66 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
     }
   };
 
+  const handleCopyAddress = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(`${config.venueName}, ${config.venueAddress}`);
+      setCopiedAddress(true);
+      setTimeout(() => setCopiedAddress(false), 2500);
+    }
+  };
+
   const handleAddToCalendar = () => {
     const title = encodeURIComponent(`${config.brideName} & ${config.groomName}'s Wedding`);
     const details = encodeURIComponent(
-      `Join us in celebrating the holy matrimony of ${config.brideName} & ${config.groomName} at ${config.venueName}.`
+      `Join us in celebrating the wedding ceremony of ${config.brideName} & ${config.groomName} at ${config.venueName}. Attire: White & Beige.`
     );
     const location = encodeURIComponent(`${config.venueName}, ${config.venueAddress}`);
-    // 2026-10-24 13:00 to 22:00 UTC
-    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=20261024T130000Z/20261024T220000Z&details=${details}&location=${location}`;
+    // 2026-10-17 15:00 PKT (10:00 UTC) to 19:00 UTC
+    const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=20261017T100000Z/20261017T170000Z&details=${details}&location=${location}`;
     window.open(googleCalendarUrl, '_blank');
   };
 
   // Schedule Timeline
   const schedule: ScheduleEvent[] = [
     {
-      time: '1:00 PM',
-      title: 'The Holy Matrimony',
-      subtitle: 'Sacred Vows & Exchange of Rings',
-      description: 'Under the arched cherry blossom canopy, witness the sacred promise and binding of two souls.',
-      iconName: 'church',
-      location: 'The Glass Pavilion Chapel',
-    },
-    {
-      time: '3:30 PM',
-      title: 'Sakura Garden Cocktails',
-      subtitle: 'Artisanal Canapés & Rosé Toast',
-      description: 'Mingle amidst blooming cherry blossom trees with live acoustic string quartet and hors d’oeuvres.',
+      time: '3:00 PM',
+      title: 'Guest Arrival & Welcome',
+      subtitle: 'Traditional Refreshments & Hospitality',
+      description: 'Warm reception of beloved family and guests at Domeera Marquee with chilled beverages and soothing acoustic melodies.',
       iconName: 'wine',
-      location: 'The Japanese Zen Courtyard',
+      location: 'Reception Foyer & Veranda',
     },
     {
-      time: '5:30 PM',
-      title: 'The Grand Floral Banquet',
-      subtitle: 'Four-Course Culinary Journey & Speeches',
-      description: 'An evening of gourmet cuisine, heartfelt family toasts, and the romantic first dance.',
-      iconName: 'utensils',
-      location: 'The Grand Ballroom & Conservatory',
-    },
-    {
-      time: '8:30 PM',
-      title: 'Starlight Soirée & Send-Off',
-      subtitle: 'Champagne, Dancing & Golden Sparklers',
-      description: 'Dance beneath hanging crystal chandeliers followed by a starlit lantern send-off.',
+      time: '3:45 PM',
+      title: 'Baraat Arrival & Grand Reception',
+      subtitle: 'Welcoming the Groom & Family',
+      description: 'Joyous arrival of the groom and family welcomed with fragrant rose and jasmine petal showers.',
       iconName: 'sparkles',
-      location: 'The Lakeside Veranda',
-    },
-  ];
-
-  // Love Story Milestones
-  const milestones: LoveMilestone[] = [
-    {
-      year: 'April 2021',
-      title: 'First Met Under the Blossoms',
-      description: 'A serendipitous collision in Kyoto during peak sakura blossom season, over a shared favorite book.',
-      image: '🌸',
-      tag: 'The Beginning',
+      location: 'Grand Marquee Entrance',
     },
     {
-      year: 'Autumn 2023',
-      title: 'Adventures Across Continents',
-      description: 'From midnight walks along the Seine to hiking mountain ridges in Hokkaido, discovering life is sweetest together.',
-      image: '✈️',
-      tag: 'The Journey',
+      time: '4:30 PM',
+      title: 'The Wedding Ceremony & Nikah',
+      subtitle: 'Sacred Covenant & Exchange of Vows',
+      description: 'In the presence of cherished elders and dear loved ones, solemnizing the holy union of two hearts.',
+      iconName: 'church',
+      location: 'Main Floral Stage',
     },
     {
-      year: 'Spring 2025',
-      title: 'The Starlit Proposal',
-      description: 'Surrounded by floating candlelit paper lanterns beneath the weeping cherry blossoms, she said forever.',
-      image: '💍',
-      tag: 'She Said Yes',
+      time: '5:15 PM',
+      title: 'Royal Banquet & Dinner Feast',
+      subtitle: 'Traditional Gourmet Buffet & Delicacies',
+      description: 'An opulent culinary banquet featuring traditional Mughlai specialties, live bread stations, and artisanal desserts.',
+      iconName: 'utensils',
+      location: 'The Grand Dining Hall',
+    },
+    {
+      time: '6:30 PM',
+      title: 'Rukhsati & Farewell Blessings',
+      subtitle: 'Heartfelt Prayers & Send-Off',
+      description: 'Prayers of prosperity and love as the newlyweds embark on their blessed journey together.',
+      iconName: 'heart',
+      location: 'Marquee Portico',
     },
   ];
 
@@ -225,15 +339,15 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
     <div className="w-full max-w-5xl mx-auto px-3 xs:px-4 sm:px-6 lg:px-8 py-10 sm:py-16 space-y-16 sm:space-y-24">
       {/* SECTION 1: COUPLE PRESENTATION & SACRED QUOTE */}
       <section className="text-center space-y-6 sm:space-y-8">
-        <div className="inline-flex items-center justify-center p-2.5 sm:p-3 rounded-full bg-pink-100/80 border border-pink-200">
-          <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-pink-500 fill-pink-300" />
+        <div className="inline-flex items-center justify-center p-2.5 sm:p-3 rounded-full bg-[#f4ede2] border border-[#ded2be]">
+          <Heart className="w-4 h-4 sm:w-5 sm:h-5 text-amber-700 fill-amber-300" />
         </div>
 
         <div className="max-w-2xl mx-auto space-y-2 sm:space-y-3 px-2">
-          <p className="font-script text-xl xs:text-2xl sm:text-3xl text-pink-700 leading-relaxed">
+          <p className="font-script text-xl xs:text-2xl sm:text-3xl text-[#57412f] leading-relaxed">
             &ldquo;In all the world, there is no heart for me like yours. In all the world, there is no love for you like mine.&rdquo;
           </p>
-          <p className="text-[10px] sm:text-xs font-serif-luxury uppercase tracking-widest text-stone-500">
+          <p className="text-[10px] sm:text-xs font-serif-luxury uppercase tracking-widest text-[#7b6552]">
             &mdash; Maya Angelou
           </p>
         </div>
@@ -242,82 +356,82 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
         <div className="relative py-4 sm:py-8 w-full max-w-2xl mx-auto flex flex-row items-start sm:items-center justify-center gap-2 xs:gap-4 sm:gap-8 md:gap-12">
           {/* Bride Profile Card */}
           <div className="flex-1 max-w-[155px] xs:max-w-[190px] sm:max-w-[240px] flex flex-col items-center text-center group">
-            <div className="relative w-24 h-24 xs:w-30 xs:h-30 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full p-1 xs:p-1.5 sm:p-2 bg-gradient-to-tr from-pink-200 via-white to-amber-100 shadow-lg sm:shadow-xl border border-pink-200 overflow-hidden transform group-hover:scale-105 transition-transform duration-500">
-              <div className="w-full h-full rounded-full bg-[#fdf2f4] flex flex-col items-center justify-center text-pink-800 p-1 xs:p-2 sm:p-4">
+            <div className="relative w-24 h-24 xs:w-30 xs:h-30 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full p-1 xs:p-1.5 sm:p-2 bg-gradient-to-tr from-[#ece1d0] via-white to-[#f5ebdb] shadow-lg sm:shadow-xl border border-[#d8c8b0] overflow-hidden transform group-hover:scale-105 transition-transform duration-500">
+              <div className="w-full h-full rounded-full bg-[#faf7f2] flex flex-col items-center justify-center text-[#4a392b] p-1 xs:p-2 sm:p-4">
                 <span className="text-2xl xs:text-3xl sm:text-4xl mb-0.5">👰🏻‍♀️</span>
                 <span className="font-serif-luxury font-semibold text-[10px] xs:text-xs sm:text-sm">The Bride</span>
-                <span className="text-[8px] xs:text-[9px] sm:text-xs font-sans-clean text-stone-500 leading-tight line-clamp-2">
+                <span className="text-[8px] xs:text-[9px] sm:text-xs font-sans-clean text-[#7a6654] leading-tight line-clamp-2">
                   Daughter of Mr. &amp; Mrs. Vance
                 </span>
               </div>
             </div>
-            <h3 className="mt-2 sm:mt-3 text-sm xs:text-base sm:text-xl md:text-2xl font-serif-luxury font-bold text-stone-800 leading-tight">
+            <h3 className="mt-2 sm:mt-3 text-sm xs:text-base sm:text-xl md:text-2xl font-serif-luxury font-bold text-stone-900 leading-tight">
               {config.brideName}
             </h3>
           </div>
 
           {/* Center Golden Amperage */}
           <div className="flex flex-col items-center justify-center shrink-0 pt-7 xs:pt-9 sm:pt-0 px-0.5 xs:px-1">
-            <span className="font-script text-2xl xs:text-3xl sm:text-5xl md:text-6xl text-pink-500 my-auto">&amp;</span>
-            <div className="w-5 xs:w-8 sm:w-12 h-px bg-pink-300 mt-0.5 sm:mt-2" />
+            <span className="font-script text-2xl xs:text-3xl sm:text-5xl md:text-6xl text-amber-700 my-auto">&amp;</span>
+            <div className="w-5 xs:w-8 sm:w-12 h-px bg-[#cbb99f] mt-0.5 sm:mt-2" />
           </div>
 
           {/* Groom Profile Card */}
           <div className="flex-1 max-w-[155px] xs:max-w-[190px] sm:max-w-[240px] flex flex-col items-center text-center group">
-            <div className="relative w-24 h-24 xs:w-30 xs:h-30 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full p-1 xs:p-1.5 sm:p-2 bg-gradient-to-tr from-amber-100 via-white to-pink-200 shadow-lg sm:shadow-xl border border-pink-200 overflow-hidden transform group-hover:scale-105 transition-transform duration-500">
-              <div className="w-full h-full rounded-full bg-[#fdf2f4] flex flex-col items-center justify-center text-pink-800 p-1 xs:p-2 sm:p-4">
+            <div className="relative w-24 h-24 xs:w-30 xs:h-30 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full p-1 xs:p-1.5 sm:p-2 bg-gradient-to-tr from-[#f5ebdb] via-white to-[#ece1d0] shadow-lg sm:shadow-xl border border-[#d8c8b0] overflow-hidden transform group-hover:scale-105 transition-transform duration-500">
+              <div className="w-full h-full rounded-full bg-[#faf7f2] flex flex-col items-center justify-center text-[#4a392b] p-1 xs:p-2 sm:p-4">
                 <span className="text-2xl xs:text-3xl sm:text-4xl mb-0.5">🤵🏻</span>
                 <span className="font-serif-luxury font-semibold text-[10px] xs:text-xs sm:text-sm">The Groom</span>
-                <span className="text-[8px] xs:text-[9px] sm:text-xs font-sans-clean text-stone-500 leading-tight line-clamp-2">
+                <span className="text-[8px] xs:text-[9px] sm:text-xs font-sans-clean text-[#7a6654] leading-tight line-clamp-2">
                   Son of Mr. &amp; Mrs. Sterling
                 </span>
               </div>
             </div>
-            <h3 className="mt-2 sm:mt-3 text-sm xs:text-base sm:text-xl md:text-2xl font-serif-luxury font-bold text-stone-800 leading-tight">
+            <h3 className="mt-2 sm:mt-3 text-sm xs:text-base sm:text-xl md:text-2xl font-serif-luxury font-bold text-stone-900 leading-tight">
               {config.groomName}
             </h3>
           </div>
         </div>
 
         {/* COUNTDOWN TIMER */}
-        <div className="max-w-xl mx-auto p-4 xs:p-6 sm:p-8 rounded-2xl bg-white/95 backdrop-blur-md border border-pink-200/80 shadow-xl shadow-pink-100/50">
-          <p className="text-[10px] xs:text-xs font-roman uppercase tracking-[0.25em] text-pink-800 mb-4 sm:mb-6">
-            Counting Down To Forever
+        <div className="max-w-xl mx-auto p-4 xs:p-6 sm:p-8 rounded-2xl bg-white/95 backdrop-blur-md border border-[#dfd2be] shadow-xl shadow-[#ede3d5]/50">
+          <p className="text-[10px] xs:text-xs font-roman uppercase tracking-[0.25em] text-[#5e4937] mb-4 sm:mb-6 font-semibold">
+            Counting Down To 17-Oct &bull; 3:00 PM
           </p>
 
           <div className="grid grid-cols-4 gap-1.5 xs:gap-2 sm:gap-4">
-            <div className="flex flex-col items-center p-2 xs:p-3 rounded-xl bg-pink-50/70 border border-pink-100">
-              <span className="text-lg xs:text-2xl sm:text-4xl font-serif-luxury font-bold text-pink-900">
+            <div className="flex flex-col items-center p-2 xs:p-3 rounded-xl bg-[#faf6ee] border border-[#e8ddcb]">
+              <span className="text-lg xs:text-2xl sm:text-4xl font-serif-luxury font-bold text-[#3d2e21]">
                 {timeLeft.days}
               </span>
-              <span className="text-[9px] xs:text-[10px] sm:text-xs font-roman tracking-wider uppercase text-stone-500 mt-0.5">
+              <span className="text-[9px] xs:text-[10px] sm:text-xs font-roman tracking-wider uppercase text-[#735e4d] mt-0.5">
                 Days
               </span>
             </div>
 
-            <div className="flex flex-col items-center p-2 xs:p-3 rounded-xl bg-pink-50/70 border border-pink-100">
-              <span className="text-lg xs:text-2xl sm:text-4xl font-serif-luxury font-bold text-pink-900">
+            <div className="flex flex-col items-center p-2 xs:p-3 rounded-xl bg-[#faf6ee] border border-[#e8ddcb]">
+              <span className="text-lg xs:text-2xl sm:text-4xl font-serif-luxury font-bold text-[#3d2e21]">
                 {timeLeft.hours}
               </span>
-              <span className="text-[9px] xs:text-[10px] sm:text-xs font-roman tracking-wider uppercase text-stone-500 mt-0.5">
+              <span className="text-[9px] xs:text-[10px] sm:text-xs font-roman tracking-wider uppercase text-[#735e4d] mt-0.5">
                 Hours
               </span>
             </div>
 
-            <div className="flex flex-col items-center p-2 xs:p-3 rounded-xl bg-pink-50/70 border border-pink-100">
-              <span className="text-lg xs:text-2xl sm:text-4xl font-serif-luxury font-bold text-pink-900">
+            <div className="flex flex-col items-center p-2 xs:p-3 rounded-xl bg-[#faf6ee] border border-[#e8ddcb]">
+              <span className="text-lg xs:text-2xl sm:text-4xl font-serif-luxury font-bold text-[#3d2e21]">
                 {timeLeft.minutes}
               </span>
-              <span className="text-[9px] xs:text-[10px] sm:text-xs font-roman tracking-wider uppercase text-stone-500 mt-0.5">
+              <span className="text-[9px] xs:text-[10px] sm:text-xs font-roman tracking-wider uppercase text-[#735e4d] mt-0.5">
                 Mins
               </span>
             </div>
 
-            <div className="flex flex-col items-center p-2 xs:p-3 rounded-xl bg-pink-50/70 border border-pink-100">
-              <span className="text-lg xs:text-2xl sm:text-4xl font-serif-luxury font-bold text-pink-900">
+            <div className="flex flex-col items-center p-2 xs:p-3 rounded-xl bg-[#faf6ee] border border-[#e8ddcb]">
+              <span className="text-lg xs:text-2xl sm:text-4xl font-serif-luxury font-bold text-[#3d2e21]">
                 {timeLeft.seconds}
               </span>
-              <span className="text-[9px] xs:text-[10px] sm:text-xs font-roman tracking-wider uppercase text-stone-500 mt-0.5">
+              <span className="text-[9px] xs:text-[10px] sm:text-xs font-roman tracking-wider uppercase text-[#735e4d] mt-0.5">
                 Secs
               </span>
             </div>
@@ -326,16 +440,16 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
           <div className="mt-5 sm:mt-6 flex flex-wrap items-center justify-center gap-2.5">
             <button
               onClick={handleAddToCalendar}
-              className="inline-flex items-center gap-2 px-4 xs:px-5 py-2 xs:py-2.5 rounded-full bg-pink-700 text-white hover:bg-pink-800 text-[11px] sm:text-xs font-serif-luxury tracking-wider uppercase transition-all shadow-md hover:shadow-lg active:scale-95 touch-manipulation"
+              className="inline-flex items-center gap-2 px-4 xs:px-5 py-2 xs:py-2.5 rounded-full bg-[#6e533c] text-white hover:bg-[#5b432e] text-[11px] sm:text-xs font-serif-luxury tracking-wider uppercase transition-all shadow-md hover:shadow-lg active:scale-95 touch-manipulation cursor-pointer"
             >
               <Calendar className="w-3.5 h-3.5" />
               Add To Calendar
             </button>
             <button
               onClick={onShowerPetals}
-              className="inline-flex items-center gap-2 px-4 xs:px-5 py-2 xs:py-2.5 rounded-full bg-pink-100 text-pink-800 hover:bg-pink-200 border border-pink-200 text-[11px] sm:text-xs font-serif-luxury tracking-wider uppercase transition-all active:scale-95 touch-manipulation"
+              className="inline-flex items-center gap-2 px-4 xs:px-5 py-2 xs:py-2.5 rounded-full bg-[#f5ece0] text-[#554130] hover:bg-[#ece0cf] border border-[#d8c8b0] text-[11px] sm:text-xs font-serif-luxury tracking-wider uppercase transition-all active:scale-95 touch-manipulation cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5 text-pink-600" />
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
               Shower Petals
             </button>
           </div>
@@ -345,21 +459,21 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
       {/* SECTION 2: EVENT SCHEDULE & CEREMONY */}
       <section id="schedule" className="space-y-10">
         <div className="text-center space-y-2">
-          <span className="text-xs font-roman uppercase tracking-[0.25em] text-pink-600">
+          <span className="text-xs font-roman uppercase tracking-[0.25em] text-[#7a644f] font-semibold">
             Order of Events
           </span>
           <h2 className="text-3xl sm:text-4xl font-serif-luxury font-bold text-stone-900">
             The Wedding Day Itinerary
           </h2>
-          <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-pink-400 to-transparent mx-auto" />
+          <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-[#bfa88b] to-transparent mx-auto" />
           <p className="text-sm font-sans-clean text-stone-600 max-w-lg mx-auto">
-            Saturday, October 24, 2026 &bull; Formal Attire requested
+            Saturday, 17-Oct 2026 &bull; Timing: 3:00 PM &bull; Domeera Marquee, Islamabad
           </p>
         </div>
 
         <div className="relative max-w-3xl mx-auto">
-          {/* Vertical floral vine connecting line */}
-          <div className="absolute left-6 sm:left-1/2 top-4 bottom-4 w-0.5 bg-gradient-to-b from-pink-300 via-rose-300 to-pink-200 -translate-x-1/2" />
+          {/* Vertical champagne connecting line */}
+          <div className="absolute left-6 sm:left-1/2 top-4 bottom-4 w-0.5 bg-gradient-to-b from-[#dfd2be] via-[#cbb99e] to-[#dfd2be] -translate-x-1/2" />
 
           <div className="space-y-8 sm:space-y-12">
             {schedule.map((item, idx) => {
@@ -372,39 +486,40 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
                   } gap-6 sm:gap-10 pl-14 sm:pl-0`}
                 >
                   {/* Center Node Badge */}
-                  <div className="absolute left-6 sm:left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-white border-2 border-pink-400 shadow-md flex items-center justify-center text-pink-600 z-10">
+                  <div className="absolute left-6 sm:left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-white border-2 border-amber-400 shadow-md flex items-center justify-center text-amber-700 z-10">
                     {item.iconName === 'church' && <Church className="w-4 h-4" />}
                     {item.iconName === 'wine' && <Wine className="w-4 h-4" />}
                     {item.iconName === 'utensils' && <UtensilsCrossed className="w-4 h-4" />}
                     {item.iconName === 'sparkles' && <PartyPopper className="w-4 h-4" />}
+                    {item.iconName === 'heart' && <Heart className="w-4 h-4 fill-amber-300" />}
                   </div>
 
                   {/* Content Card */}
                   <div
-                    className={`w-full sm:w-[calc(50%-2rem)] p-6 rounded-2xl bg-white/95 backdrop-blur-sm border border-pink-200/80 shadow-md hover:shadow-lg transition-all ${
+                    className={`w-full sm:w-[calc(50%-2rem)] p-6 rounded-2xl bg-white/95 backdrop-blur-sm border border-[#e2d5c3] shadow-md hover:shadow-lg transition-all ${
                       isEven ? 'sm:text-right' : 'sm:text-left'
                     }`}
                   >
                     <div
-                      className={`inline-block px-3 py-1 rounded-full bg-pink-100/90 text-pink-800 text-xs font-serif-luxury font-semibold mb-2`}
+                      className="inline-block px-3 py-1 rounded-full bg-[#f6efe4] text-[#594432] text-xs font-serif-luxury font-semibold mb-2 border border-[#e2d6c4]"
                     >
                       {item.time}
                     </div>
                     <h3 className="text-xl font-serif-luxury font-bold text-stone-900">
                       {item.title}
                     </h3>
-                    <p className="text-xs font-serif-luxury italic text-pink-700 mb-2">
+                    <p className="text-xs font-serif-luxury italic text-[#82644b] mb-2">
                       {item.subtitle}
                     </p>
                     <p className="text-xs sm:text-sm font-sans-clean text-stone-600 leading-relaxed mb-3">
                       {item.description}
                     </p>
                     <div
-                      className={`flex items-center gap-1.5 text-xs text-stone-500 ${
+                      className={`flex items-center gap-1.5 text-xs text-[#735e4d] ${
                         isEven ? 'sm:justify-end' : 'sm:justify-start'
                       }`}
                     >
-                      <MapPin className="w-3.5 h-3.5 text-pink-500" />
+                      <MapPin className="w-3.5 h-3.5 text-amber-700" />
                       <span>{item.location}</span>
                     </div>
                   </div>
@@ -416,74 +531,98 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
       </section>
 
       {/* SECTION 3: VENUE & LOCATION */}
-      <section id="venue" className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-[#fff7f8] via-white to-[#fff0f4] border border-pink-200/90 shadow-xl space-y-8">
+      <section id="venue" className="p-8 sm:p-12 rounded-3xl bg-gradient-to-br from-[#faf7f2] via-white to-[#f5eee2] border border-[#ded2be] shadow-xl space-y-8">
         <div className="text-center space-y-2">
-          <span className="text-xs font-roman uppercase tracking-[0.25em] text-pink-600">
+          <span className="text-xs font-roman uppercase tracking-[0.25em] text-[#7a644f] font-semibold">
             The Location
           </span>
           <h2 className="text-3xl sm:text-4xl font-serif-luxury font-bold text-stone-900">
             {config.venueName}
           </h2>
-          <p className="text-xs font-sans-clean text-stone-500">
+          <p className="text-xs sm:text-sm font-sans-clean text-[#695543]">
             {config.venueAddress}
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-          {/* Visual Venue Presentation Card */}
-          <div className="relative rounded-2xl overflow-hidden border border-pink-200 shadow-md group">
-            {/* Elegant botanical illustration banner */}
-            <div className="h-64 sm:h-72 w-full bg-gradient-to-tr from-pink-200 via-rose-100 to-amber-100 flex flex-col items-center justify-center p-6 text-center">
-              <span className="text-6xl mb-3 group-hover:scale-110 transition-transform duration-500">
-                🏯
-              </span>
-              <p className="font-serif-luxury font-bold text-xl text-stone-800">
-                The Botanical Glasshouse Pavilion
-              </p>
-              <p className="text-xs font-sans-clean text-stone-600 mt-1 max-w-xs">
-                Nestled amidst historic bamboo groves and thousand-year-old sakura blossoms in the eastern hills of Kyoto.
-              </p>
-              <div className="mt-4 px-3 py-1 rounded-full bg-white/80 border border-pink-200 text-xs text-pink-800 font-serif-luxury">
-                Heated Glass Pavilion &bull; Valet Available
+          {/* Visual Venue Presentation Card with Scroll Parallax & Blur */}
+          <div
+            ref={venueImageContainerRef}
+            className="relative h-80 sm:h-96 md:h-[430px] w-full rounded-2xl sm:rounded-3xl overflow-hidden border border-[#d8c8b0] shadow-xl group flex flex-col justify-end p-4 sm:p-6"
+          >
+            {/* Parallax Image Background */}
+            <motion.div
+              style={{
+                y: venueParallaxY,
+                scale: venueParallaxScale,
+                filter: venueBlur,
+              }}
+              className="absolute -top-[20%] -bottom-[20%] inset-x-0 w-full h-[140%] will-change-transform"
+            >
+              <img
+                src="https://lh3.googleusercontent.com/gps-cs-s/AHRPTWmqDt1EwGvvB_llydSxx_2_8GX1WeAEidm2bRD8NcSPPo5LsNriE6KQ_tu3JGwAsFNAm7fepNfCJiOtxNxxdfdEtW3ZjkCFgJj8DnBQtF6VfNU0dr1GHyyK1EQE6L0SXDasVriafJ2UvnCB=s680-w680-h510-rw"
+                alt="Domeera Marquee Islamabad Wedding Venue"
+                referrerPolicy="no-referrer"
+                loading="eager"
+                className="w-full h-full object-cover object-center"
+              />
+            </motion.div>
+
+            {/* Ambient luxury lighting gradients */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent pointer-events-none" />
+
+            {/* Spacious Bottom Frosted Caption */}
+            <div className="relative z-10 p-3.5 sm:p-4 rounded-xl sm:rounded-2xl bg-black/40 backdrop-blur-md border border-white/20 text-white space-y-1 shadow-lg">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-amber-300 shrink-0" />
+                <h3 className="font-serif-luxury font-bold text-lg sm:text-xl text-white tracking-wide">
+                  Domeera Marquee
+                </h3>
+                <span className="text-[11px] sm:text-xs text-amber-200/90 font-serif-luxury">
+                  &bull; Islamabad
+                </span>
               </div>
+              <p className="text-xs font-sans-clean text-stone-200 leading-relaxed">
+                Main Gulberg Expressway &bull; Air Conditioned &bull; Valet Parking
+              </p>
             </div>
           </div>
 
           {/* Venue Information & Directions */}
           <div className="space-y-6">
             <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-pink-50/70 border border-pink-100 flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-pink-600 mt-0.5 shrink-0" />
+              <div className="p-4 rounded-xl bg-[#faf6ee] border border-[#e8ddcb] flex items-start gap-3">
+                <MapPin className="w-5 h-5 text-amber-700 mt-0.5 shrink-0" />
                 <div>
                   <h4 className="text-sm font-serif-luxury font-bold text-stone-900">
                     Address &amp; Landmarks
                   </h4>
                   <p className="text-xs font-sans-clean text-stone-600 mt-0.5">
-                    108 Blossom Valley Road, Higashiyama Ward, Kyoto 605-0001, Japan
+                    Service Road, Main Gulberg Expy, Koral Town, Islamabad, 46000
                   </p>
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-pink-50/70 border border-pink-100 flex items-start gap-3">
-                <Clock className="w-5 h-5 text-pink-600 mt-0.5 shrink-0" />
+              <div className="p-4 rounded-xl bg-[#faf6ee] border border-[#e8ddcb] flex items-start gap-3">
+                <Clock className="w-5 h-5 text-amber-700 mt-0.5 shrink-0" />
                 <div>
                   <h4 className="text-sm font-serif-luxury font-bold text-stone-900">
-                    Guest Arrival &amp; Seating
+                    Guest Arrival &amp; Event Timing
                   </h4>
                   <p className="text-xs font-sans-clean text-stone-600 mt-0.5">
-                    Doors open at 12:15 PM. We kindly ask guests to take their seats by 12:45 PM before the bridal procession begins.
+                    Doors open at 2:30 PM. Formal proceedings commence promptly at 3:00 PM on Saturday, 17-Oct.
                   </p>
                 </div>
               </div>
 
-              <div className="p-4 rounded-xl bg-pink-50/70 border border-pink-100 flex items-start gap-3">
-                <Users className="w-5 h-5 text-pink-600 mt-0.5 shrink-0" />
+              <div className="p-4 rounded-xl bg-[#faf6ee] border border-[#e8ddcb] flex items-start gap-3">
+                <Users className="w-5 h-5 text-amber-700 mt-0.5 shrink-0" />
                 <div>
                   <h4 className="text-sm font-serif-luxury font-bold text-stone-900">
-                    Complimentary Shuttle Service
+                    Parking &amp; Navigation
                   </h4>
                   <p className="text-xs font-sans-clean text-stone-600 mt-0.5">
-                    Private shuttles will run between Kyoto Station Central Gate and the venue every 20 minutes from 11:30 AM to 11:00 PM.
+                    Complimentary valet parking provided upon entry. Direct and easy access from Main Gulberg Expressway.
                   </p>
                 </div>
               </div>
@@ -494,16 +633,25 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
                 href={config.googleMapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-pink-700 hover:bg-pink-800 text-white text-xs font-serif-luxury uppercase tracking-wider transition-all shadow-md"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#6e533c] hover:bg-[#5b432e] text-white text-xs font-serif-luxury uppercase tracking-wider transition-all shadow-md cursor-pointer"
               >
                 <ExternalLink className="w-3.5 h-3.5" />
                 Open In Google Maps
               </a>
               <button
-                onClick={handleShare}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white hover:bg-pink-50 text-stone-700 border border-pink-200 text-xs font-serif-luxury uppercase tracking-wider transition-all"
+                type="button"
+                onClick={handleCopyAddress}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white hover:bg-[#faf5ed] text-[#4d3928] border border-[#d5c5ad] text-xs font-serif-luxury uppercase tracking-wider transition-all cursor-pointer shadow-2xs"
               >
-                <Share2 className="w-3.5 h-3.5 text-pink-500" />
+                <Copy className="w-3.5 h-3.5 text-amber-700" />
+                {copiedAddress ? 'Address Copied!' : 'Copy Address'}
+              </button>
+              <button
+                type="button"
+                onClick={handleShare}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white hover:bg-[#faf5ed] text-[#4d3928] border border-[#d5c5ad] text-xs font-serif-luxury uppercase tracking-wider transition-all cursor-pointer shadow-2xs"
+              >
+                <Share2 className="w-3.5 h-3.5 text-amber-700" />
                 {copiedLink ? 'Link Copied!' : 'Share Invitation'}
               </button>
             </div>
@@ -511,91 +659,114 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
         </div>
       </section>
 
-      {/* SECTION 4: LOVE STORY / MILESTONES */}
-      <section id="story" className="space-y-10">
-        <div className="text-center space-y-2">
-          <span className="text-xs font-roman uppercase tracking-[0.25em] text-pink-600">
-            Our Chapters
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-serif-luxury font-bold text-stone-900">
-            How Two Hearts Met
-          </h2>
-          <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-pink-400 to-transparent mx-auto" />
+      {/* SECTION 4: THEMED DRESSING (Attire Guide) */}
+      <section id="attire" className="p-8 sm:p-12 rounded-3xl bg-white border border-[#dfd2be] shadow-lg text-center space-y-8">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#f5ece0] text-[#55402f] border border-[#dfd3c0] text-xs font-serif-luxury tracking-widest uppercase">
+          <Palette className="w-3.5 h-3.5 text-amber-700" />
+          Themed Dressing
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {milestones.map((m, idx) => (
-            <div
-              key={idx}
-              className="p-6 rounded-2xl bg-white border border-pink-200 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-3xl">{m.image}</span>
-                  <span className="px-3 py-1 rounded-full bg-pink-100 text-pink-800 text-[11px] font-serif-luxury tracking-wider font-semibold">
-                    {m.year}
-                  </span>
-                </div>
-                <span className="text-[10px] font-roman uppercase tracking-widest text-stone-400">
-                  {m.tag}
-                </span>
-                <h4 className="text-lg font-serif-luxury font-bold text-stone-900 mt-1 mb-2">
-                  {m.title}
-                </h4>
-                <p className="text-xs font-sans-clean text-stone-600 leading-relaxed">
-                  {m.description}
-                </p>
-              </div>
+        <div className="max-w-2xl mx-auto space-y-2">
+          <h3 className="text-2xl sm:text-3xl font-serif-luxury font-bold text-stone-900">
+            White &amp; Beige Theme Attire
+          </h3>
+          <p className="text-xs sm:text-sm font-sans-clean text-stone-600 max-w-xl mx-auto leading-relaxed">
+            To create an aesthetically cohesive and elegant setting for our celebrations, we kindly request our valued guests to join us dressed in our chosen theme.
+          </p>
+        </div>
 
-              <div className="mt-6 pt-4 border-t border-pink-100 flex items-center gap-1.5 text-pink-400 text-xs">
-                <Heart className="w-3.5 h-3.5 fill-pink-200" />
-                <span className="font-serif-luxury italic">Chapter {idx + 1}</span>
+        {/* Two Attire Cards: Girls & Boys */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto text-left">
+          {/* Girls Attire Card */}
+          <div className="p-6 sm:p-7 rounded-2xl bg-gradient-to-br from-[#fdfcf9] via-white to-[#fbf8f2] border-2 border-[#dfd2be] shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <span className="px-3 py-1 rounded-full bg-[#faf5ee] border border-[#e4d7c5] text-[#543f2e] text-[10px] font-serif-luxury uppercase tracking-widest font-semibold">
+                Girls &amp; Ladies
+              </span>
+              <span className="text-2xl">👰🏻‍♀️</span>
+            </div>
+
+            <h4 className="text-xl font-serif-luxury font-bold text-[#2d221a] mb-1">
+              White, Off White &amp; Beige
+            </h4>
+            <p className="text-xs font-sans-clean text-[#6c5949] leading-relaxed mb-4">
+              Formal wear in shades of pure white, soft ivory, off-white, and warm beige. Suitable attire includes formal lehengas, ghararas, sarees, embroidered suits, or maxi gowns.
+            </p>
+
+            {/* Color Swatches */}
+            <div className="pt-3 border-t border-[#ede3d4]">
+              <span className="text-[10px] font-roman uppercase tracking-wider text-[#8b7664] block mb-2 font-semibold">
+                Recommended Palette:
+              </span>
+              <div className="flex flex-wrap gap-3 items-center">
+                <div className="flex flex-col items-center">
+                  <div className="w-9 h-9 rounded-full bg-[#ffffff] border-2 border-[#d8c8b0] shadow-2xs" />
+                  <span className="text-[9px] font-sans-clean text-stone-600 mt-1">White</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="w-9 h-9 rounded-full bg-[#faf6f0] border-2 border-[#d8c8b0] shadow-2xs" />
+                  <span className="text-[9px] font-sans-clean text-stone-600 mt-1">Off-White</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="w-9 h-9 rounded-full bg-[#f4ece0] border-2 border-[#d8c8b0] shadow-2xs" />
+                  <span className="text-[9px] font-sans-clean text-stone-600 mt-1">Ivory</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="w-9 h-9 rounded-full bg-[#e6dac8] border-2 border-[#d8c8b0] shadow-2xs" />
+                  <span className="text-[9px] font-sans-clean text-stone-600 mt-1">Beige</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="w-9 h-9 rounded-full bg-[#d8c5aa] border-2 border-[#d8c8b0] shadow-2xs" />
+                  <span className="text-[9px] font-sans-clean text-stone-600 mt-1">Champagne</span>
+                </div>
               </div>
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* SECTION 5: DRESS CODE & PALETTE */}
-      <section className="p-8 sm:p-10 rounded-3xl bg-white border border-pink-200 shadow-lg text-center space-y-6">
-        <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-pink-100/90 text-pink-800 text-xs font-serif-luxury tracking-widest uppercase">
-          <Palette className="w-3.5 h-3.5 text-pink-600" />
-          Dress Code Guide
-        </div>
-
-        <h3 className="text-2xl sm:text-3xl font-serif-luxury font-bold text-stone-900">
-          Sakura Romantic &bull; Black Tie Optional
-        </h3>
-
-        <p className="text-xs sm:text-sm font-sans-clean text-stone-600 max-w-xl mx-auto leading-relaxed">
-          We invite you to celebrate with us in hues of soft sakura pinks, champagne rose, warm ivory, and soft sage. Gentlemen in formal suits or tuxedos; ladies in midi or floor-length gowns.
-        </p>
-
-        {/* Color Palette Swatches */}
-        <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
-          <div className="flex flex-col items-center">
-            <div className="w-12 h-12 rounded-full bg-[#fbcfe8] border-2 border-white shadow-md" />
-            <span className="text-[11px] font-serif-luxury text-stone-600 mt-1.5">Sakura Blush</span>
           </div>
 
-          <div className="flex flex-col items-center">
-            <div className="w-12 h-12 rounded-full bg-[#f472b6] border-2 border-white shadow-md" />
-            <span className="text-[11px] font-serif-luxury text-stone-600 mt-1.5">Rose Quartz</span>
-          </div>
+          {/* Boys Attire Card */}
+          <div className="p-6 sm:p-7 rounded-2xl bg-gradient-to-br from-[#fdfcf9] via-white to-[#fbf8f2] border-2 border-[#dfd2be] shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <span className="px-3 py-1 rounded-full bg-[#faf5ee] border border-[#e4d7c5] text-[#543f2e] text-[10px] font-serif-luxury uppercase tracking-widest font-semibold">
+                Boys &amp; Gentlemen
+              </span>
+              <span className="text-2xl">🤵🏻</span>
+            </div>
 
-          <div className="flex flex-col items-center">
-            <div className="w-12 h-12 rounded-full bg-[#fff0f5] border-2 border-pink-200 shadow-md" />
-            <span className="text-[11px] font-serif-luxury text-stone-600 mt-1.5">Pearl White</span>
-          </div>
+            <h4 className="text-xl font-serif-luxury font-bold text-[#2d221a] mb-1">
+              White Shalwar Kameez &amp; Brown Waistcoat
+            </h4>
+            <p className="text-xs font-sans-clean text-[#6c5949] leading-relaxed mb-4">
+              Traditional crisp white Shalwar Kameez or Kurta Pajama paired with a tailored brown, mocha, or camel waistcoat. Formal leather footwear or Peshawari chappal.
+            </p>
 
-          <div className="flex flex-col items-center">
-            <div className="w-12 h-12 rounded-full bg-[#f5d77f] border-2 border-white shadow-md" />
-            <span className="text-[11px] font-serif-luxury text-stone-600 mt-1.5">Champagne Gold</span>
-          </div>
-
-          <div className="flex flex-col items-center">
-            <div className="w-12 h-12 rounded-full bg-[#d1e7dd] border-2 border-white shadow-md" />
-            <span className="text-[11px] font-serif-luxury text-stone-600 mt-1.5">Soft Sage</span>
+            {/* Color Swatches */}
+            <div className="pt-3 border-t border-[#ede3d4]">
+              <span className="text-[10px] font-roman uppercase tracking-wider text-[#8b7664] block mb-2 font-semibold">
+                Recommended Palette:
+              </span>
+              <div className="flex flex-wrap gap-3 items-center">
+                <div className="flex flex-col items-center">
+                  <div className="w-9 h-9 rounded-full bg-[#ffffff] border-2 border-[#d8c8b0] shadow-2xs" />
+                  <span className="text-[9px] font-sans-clean text-stone-600 mt-1">White</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="w-9 h-9 rounded-full bg-[#8c5e39] border-2 border-[#ffffff] shadow-2xs" />
+                  <span className="text-[9px] font-sans-clean text-stone-600 mt-1">Camel</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="w-9 h-9 rounded-full bg-[#654326] border-2 border-[#ffffff] shadow-2xs" />
+                  <span className="text-[9px] font-sans-clean text-stone-600 mt-1">Walnut</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="w-9 h-9 rounded-full bg-[#4a2e19] border-2 border-[#ffffff] shadow-2xs" />
+                  <span className="text-[9px] font-sans-clean text-stone-600 mt-1">Mocha</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="w-9 h-9 rounded-full bg-[#c2964e] border-2 border-[#ffffff] shadow-2xs" />
+                  <span className="text-[9px] font-sans-clean text-stone-600 mt-1">Brass Gold</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -603,69 +774,128 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
       {/* SECTION 6: INTERACTIVE RSVP & LIVE BLESSINGS WALL */}
       <section id="rsvp" className="space-y-12">
         <div className="text-center space-y-2">
-          <span className="text-xs font-roman uppercase tracking-[0.25em] text-pink-600">
+          <span className="text-xs font-roman uppercase tracking-[0.25em] text-[#7a644f] font-semibold">
             Be Our Guest
           </span>
           <h2 className="text-3xl sm:text-4xl font-serif-luxury font-bold text-stone-900">
             RSVP &amp; Send Your Blessings
           </h2>
           <p className="text-xs font-sans-clean text-stone-500">
-            Kindly respond by September 15, 2026 to help us finalize arrangements
+            Kindly respond by October 5, 2026 to help us finalize arrangements
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* RSVP FORM (Left column) */}
-          <div className="lg:col-span-6 p-6 sm:p-8 rounded-2xl bg-white border border-pink-200/90 shadow-xl">
+          <div className="lg:col-span-6 p-6 sm:p-8 rounded-2xl bg-white border border-[#dfd2be] shadow-xl">
+            {/* Hidden Iframe to catch Google Forms POST response silently */}
+            <iframe
+              name="google_rsvp_sink_iframe"
+              id="google_rsvp_sink_iframe"
+              title="Google Form Response Target"
+              className="hidden"
+              style={{ display: 'none', width: 0, height: 0, border: 'none' }}
+            />
+
             {rsvpSubmitted ? (
               <div className="text-center py-10 space-y-4">
-                <div className="w-16 h-16 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center mx-auto shadow-inner">
+                <div className="w-16 h-16 rounded-full bg-[#f5ede2] text-amber-800 flex items-center justify-center mx-auto shadow-inner border border-[#d8c8b0]">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
                 <h3 className="text-2xl font-serif-luxury font-bold text-stone-900">
                   Thank You, {rsvpForm.name}!
                 </h3>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-serif-luxury">
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  Successfully Synced with Official Wedding Registry
+                </div>
                 <p className="text-sm font-sans-clean text-stone-600 max-w-sm mx-auto">
                   {rsvpForm.attending === 'yes'
-                    ? 'Your confirmation and warm blessings have been received. We cannot wait to celebrate together!'
-                    : 'We will deeply miss you, but thank you for your kind wishes and heartfelt blessing.'}
+                    ? `Your RSVP for ${rsvpForm.guestCount} ${rsvpForm.guestCount === 1 ? 'guest' : 'guests'} has been recorded. We look forward to celebrating together in our White & Beige theme!`
+                    : 'We will deeply miss you, but thank you for your kind wishes and heartfelt prayers.'}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setRsvpSubmitted(false)}
-                  className="mt-4 px-5 py-2 rounded-full bg-pink-100 hover:bg-pink-200 text-pink-800 text-xs font-serif-luxury tracking-wider uppercase transition-colors"
-                >
-                  Edit Response
-                </button>
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRsvpSubmitted(false);
+                      setRsvpForm({
+                        name: '',
+                        attending: 'yes',
+                        guestCount: 1,
+                        attireChecked: true,
+                        message: '',
+                      });
+                    }}
+                    className="px-5 py-2 rounded-full bg-[#f5ede2] hover:bg-[#ebdcc8] text-[#4f3d2b] text-xs font-serif-luxury tracking-wider uppercase transition-colors cursor-pointer border border-[#d5c5ad]"
+                  >
+                    Submit Another Response
+                  </button>
+                </div>
               </div>
             ) : (
-              <form onSubmit={handleRsvpSubmit} className="space-y-5">
+              <form
+                action="https://docs.google.com/forms/u/0/d/e/1FAIpQLSc1XEEIKvYaoZqRTjW-uWKcxZU3OVB1Z3OwTSpXjpj26kPU4Q/formResponse"
+                method="POST"
+                target="google_rsvp_sink_iframe"
+                onSubmit={handleRsvpSubmit}
+                className="space-y-5"
+              >
+                {/* Mapped Google Form Hidden Entry Fields */}
+                <input
+                  type="hidden"
+                  name="entry.1641608483"
+                  value={rsvpForm.attending === 'yes' ? 'Joyfully Accept' : 'Regretfully Decline'}
+                />
+                <input
+                  type="hidden"
+                  name="entry.459360220"
+                  value={
+                    rsvpForm.attending === 'yes'
+                      ? `${rsvpForm.guestCount} ${rsvpForm.guestCount === 1 ? 'Guest' : 'Guests'}`
+                      : '0 Guests'
+                  }
+                />
+                <input
+                  type="hidden"
+                  name="entry.1837360552"
+                  value={rsvpForm.attireChecked ? 'White & Beige Theme Confirmed' : 'White & Beige Theme'}
+                />
+                <input
+                  type="hidden"
+                  name="entry.134681084"
+                  value={rsvpForm.attireChecked ? 'White & Beige Theme Confirmed' : 'White & Beige Theme'}
+                />
+
+                {/* Name field */}
                 <div>
-                  <label className="block text-xs font-roman uppercase tracking-wider text-stone-700 mb-1.5">
+                  <label className="block text-xs font-roman uppercase tracking-wider text-stone-700 mb-1.5 font-semibold">
                     Your Full Name(s) *
                   </label>
                   <input
                     type="text"
+                    name="entry.1411766687"
                     required
                     value={rsvpForm.name}
                     onChange={(e) => setRsvpForm({ ...rsvpForm, name: e.target.value })}
-                    placeholder="e.g. Lord &amp; Lady Montgomery"
-                    className="w-full px-4 py-2.5 rounded-xl border border-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400/50 bg-[#fffbfc] text-sm text-stone-800"
+                    placeholder="e.g. Mr. &amp; Mrs. Haris Khan"
+                    className="w-full px-4 py-2.5 rounded-xl border border-[#d8c9b2] focus:outline-none focus:ring-2 focus:ring-amber-500/40 bg-[#fffdfa] text-sm text-stone-800"
                   />
                 </div>
 
+                {/* Attending Selection */}
                 <div>
-                  <label className="block text-xs font-roman uppercase tracking-wider text-stone-700 mb-1.5">
+                  <label className="block text-xs font-roman uppercase tracking-wider text-stone-700 mb-1.5 font-semibold">
                     Will You Be Attending? *
                   </label>
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => setRsvpForm({ ...rsvpForm, attending: 'yes' })}
-                      className={`p-3 rounded-xl border text-xs font-serif-luxury font-semibold transition-all ${
+                      className={`p-3 rounded-xl border text-xs font-serif-luxury font-semibold transition-all cursor-pointer ${
                         rsvpForm.attending === 'yes'
-                          ? 'bg-pink-700 text-white border-pink-700 shadow-md'
-                          : 'bg-white text-stone-700 border-pink-200 hover:bg-pink-50'
+                          ? 'bg-[#6e533c] text-white border-[#6e533c] shadow-md'
+                          : 'bg-white text-stone-700 border-[#d8c9b2] hover:bg-[#faf5ee]'
                       }`}
                     >
                       Joyfully Accept
@@ -673,10 +903,10 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
                     <button
                       type="button"
                       onClick={() => setRsvpForm({ ...rsvpForm, attending: 'no' })}
-                      className={`p-3 rounded-xl border text-xs font-serif-luxury font-semibold transition-all ${
+                      className={`p-3 rounded-xl border text-xs font-serif-luxury font-semibold transition-all cursor-pointer ${
                         rsvpForm.attending === 'no'
-                          ? 'bg-pink-700 text-white border-pink-700 shadow-md'
-                          : 'bg-white text-stone-700 border-pink-200 hover:bg-pink-50'
+                          ? 'bg-[#6e533c] text-white border-[#6e533c] shadow-md'
+                          : 'bg-white text-stone-700 border-[#d8c9b2] hover:bg-[#faf5ee]'
                       }`}
                     >
                       Regretfully Decline
@@ -685,61 +915,71 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
                 </div>
 
                 {rsvpForm.attending === 'yes' && (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-roman uppercase tracking-wider text-stone-700 mb-1.5">
+                      <label className="block text-xs font-roman uppercase tracking-wider text-stone-700 mb-1.5 font-semibold">
                         Number of Guests
                       </label>
                       <select
                         value={rsvpForm.guestCount}
                         onChange={(e) => setRsvpForm({ ...rsvpForm, guestCount: Number(e.target.value) })}
-                        className="w-full px-3 py-2 rounded-xl border border-pink-200 bg-[#fffbfc] text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-pink-400/50"
+                        className="w-full px-3 py-2 rounded-xl border border-[#d8c9b2] bg-[#fffdfa] text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                       >
                         <option value={1}>1 Guest</option>
                         <option value={2}>2 Guests</option>
                         <option value={3}>3 Guests</option>
                         <option value={4}>4 Guests</option>
+                        <option value={5}>Family (5+)</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-roman uppercase tracking-wider text-stone-700 mb-1.5">
-                        Dietary Preference
+                      <label className="block text-xs font-roman uppercase tracking-wider text-stone-700 mb-1.5 font-semibold">
+                        Attire Theme Check
                       </label>
-                      <select
-                        value={rsvpForm.dietary}
-                        onChange={(e) => setRsvpForm({ ...rsvpForm, dietary: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-pink-200 bg-[#fffbfc] text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-pink-400/50"
-                      >
-                        <option value="None">Standard Menu</option>
-                        <option value="Vegetarian">Vegetarian</option>
-                        <option value="Vegan">Vegan</option>
-                        <option value="Halal">Halal</option>
-                        <option value="Gluten-Free">Gluten-Free</option>
-                      </select>
+                      <label className="w-full px-3 py-2 rounded-xl border border-[#d8c9b2] bg-[#fbf8f2] text-xs text-[#523e2d] flex items-center gap-2 font-medium cursor-pointer hover:bg-[#f5ede2] transition-colors select-none">
+                        <input
+                          type="checkbox"
+                          checked={rsvpForm.attireChecked}
+                          onChange={(e) => setRsvpForm({ ...rsvpForm, attireChecked: e.target.checked })}
+                          className="w-4 h-4 rounded text-[#6e533c] focus:ring-amber-500 accent-[#6e533c]"
+                        />
+                        <span>White &amp; Beige Theme</span>
+                      </label>
                     </div>
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-xs font-roman uppercase tracking-wider text-stone-700 mb-1.5">
-                    Blessing &amp; Message for the Couple
+                  <label className="block text-xs font-roman uppercase tracking-wider text-stone-700 mb-1.5 font-semibold">
+                    Blessings &amp; Message for the Couple
                   </label>
                   <textarea
+                    name="entry.2045044766"
                     rows={3}
                     value={rsvpForm.message}
                     onChange={(e) => setRsvpForm({ ...rsvpForm, message: e.target.value })}
-                    placeholder="Write a sweet congratulatory note to be displayed on our wishes wall..."
-                    className="w-full px-4 py-2.5 rounded-xl border border-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400/50 bg-[#fffbfc] text-sm text-stone-800 resize-none"
+                    placeholder="Write a sweet congratulatory note to be displayed on our live guestbook..."
+                    className="w-full px-4 py-2.5 rounded-xl border border-[#d8c9b2] focus:outline-none focus:ring-2 focus:ring-amber-500/40 bg-[#fffdfa] text-sm text-stone-800 resize-none"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-3 rounded-full bg-gradient-to-r from-pink-600 via-rose-600 to-pink-700 text-white text-xs font-serif-luxury uppercase tracking-widest font-semibold hover:shadow-lg hover:shadow-pink-300/50 transition-all flex items-center justify-center gap-2 active:scale-98"
+                  disabled={isSubmitting}
+                  className="w-full py-3 rounded-full bg-gradient-to-r from-[#6e533c] via-[#85664a] to-[#6e533c] disabled:opacity-75 text-white text-xs font-serif-luxury uppercase tracking-widest font-semibold hover:shadow-lg hover:shadow-[#dfd3c0]/50 transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
                 >
-                  <Send className="w-3.5 h-3.5" />
-                  Submit RSVP &amp; Post Blessing
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Syncing RSVP with Registry...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" />
+                      Submit RSVP &amp; Post Blessing
+                    </>
+                  )}
                 </button>
               </form>
             )}
@@ -747,87 +987,151 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
 
           {/* LIVE WISHES / GUESTBOOK WALL (Right column) */}
           <div className="lg:col-span-6 space-y-4">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="font-serif-luxury font-bold text-xl text-stone-900 flex items-center gap-2">
-                <span>Guest Wishes &amp; Blessings</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 font-sans-clean font-semibold">
-                  {wishes.length}
-                </span>
-              </h3>
-              <span className="text-xs font-serif-luxury text-stone-500">Live Guestbook</span>
+            <div className="flex items-center justify-between px-2 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <h3 className="font-serif-luxury font-bold text-xl text-stone-900">
+                  Guest Wishes &amp; Blessings
+                </h3>
+                {wishes.length > 0 && (
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#f5ede2] text-[#554030] font-sans-clean font-semibold border border-[#e2d5c3]">
+                    {wishes.length}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => syncFromSheet()}
+                  disabled={isSyncingSheet}
+                  className="p-1.5 rounded-full bg-[#faf5ee] text-stone-600 hover:text-stone-900 border border-[#e2d5c3] hover:bg-[#f3e9db] transition-all cursor-pointer active:scale-95 disabled:opacity-60"
+                  title="Refresh Wishes"
+                >
+                  <RefreshCw
+                    className={`w-3.5 h-3.5 ${isSyncingSheet ? 'animate-spin text-amber-700' : ''}`}
+                  />
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
-              {wishes.map((w) => (
-                <div
-                  key={w.id}
-                  className="p-4 rounded-xl bg-white border border-pink-200/80 shadow-sm hover:shadow-md transition-shadow relative group"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h4 className="text-sm font-serif-luxury font-bold text-stone-800">
-                        {w.name}
-                      </h4>
-                      <div className="flex items-center gap-2 text-[11px] text-stone-400 mt-0.5">
-                        <span>{w.timestamp}</span>
-                        {w.attending === 'yes' && (
-                          <span className="text-pink-600">&bull; Attending</span>
-                        )}
+            {/* WISHES CARDS */}
+            {wishes.length === 0 ? (
+              <div className="p-8 rounded-2xl bg-[#fcfaf7] border border-[#dfd2be] text-center space-y-2.5">
+                <div className="w-10 h-10 rounded-full bg-[#f4ebe0] text-[#6e533c] flex items-center justify-center mx-auto border border-[#ded2be]">
+                  <Heart className="w-5 h-5 text-amber-800" />
+                </div>
+                <h4 className="font-serif-luxury font-bold text-stone-800 text-base">
+                  Be the First to Send Blessings
+                </h4>
+                <p className="font-sans-clean text-xs text-stone-500 max-w-xs mx-auto leading-relaxed">
+                  Submit your RSVP to have your congratulations and prayers featured on our wedding wall.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[490px] overflow-y-auto pr-1">
+                {wishes.map((w) => (
+                  <div
+                    key={w.id}
+                    className="p-4 rounded-2xl bg-white border border-[#dfd2be] shadow-xs hover:shadow-md transition-all relative group space-y-2.5"
+                  >
+                    {/* Top Header: Avatar Initials, Name, Timestamp, Love Button */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#f5ede2] to-[#ebe0cf] border border-[#d5c5ad] text-[#554030] flex items-center justify-center font-serif-luxury font-bold text-xs uppercase shadow-2xs">
+                          {w.name.slice(0, 2)}
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-serif-luxury font-bold text-stone-800 leading-tight">
+                            {w.name}
+                          </h4>
+                          <span className="text-[10px] font-sans-clean text-stone-400">
+                            {w.timestamp}
+                          </span>
+                        </div>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleLikeWish(w.id)}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#faf5ee] hover:bg-[#f3e9db] text-amber-800 text-xs transition-colors cursor-pointer border border-[#e8ddcb]"
+                        title="Send love"
+                      >
+                        <Heart className="w-3 h-3 fill-amber-500 text-amber-700" />
+                        <span className="text-[11px] font-sans-clean font-medium">
+                          {wishLikes[w.id] || 0}
+                        </span>
+                      </button>
                     </div>
 
-                    <button
-                      onClick={() => handleLikeWish(w.id)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-pink-50 text-pink-600 hover:bg-pink-100 text-xs transition-colors"
-                      title="Send love"
-                    >
-                      <Heart className="w-3 h-3 fill-pink-500" />
-                      <span className="text-[11px] font-sans-clean font-medium">
-                        {wishLikes[w.id] || 0}
-                      </span>
-                    </button>
-                  </div>
+                    {/* Badges: Attendance & Theme Verification */}
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                      {w.attending === 'yes' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#f7f0e6] text-[#634b37] border border-[#dfd2be] font-serif-luxury font-medium">
+                          <Users className="w-2.5 h-2.5 text-amber-800" />
+                          <span>
+                            {w.guestCount && w.guestCount > 1
+                              ? `${w.guestCount} Guests &bull; Joyfully Attending`
+                              : 'Joyfully Attending'}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200 font-serif-luxury">
+                          <Heart className="w-2.5 h-2.5 text-stone-400" />
+                          <span>Warm Prayers Sent</span>
+                        </span>
+                      )}
 
-                  <p className="mt-2.5 text-xs sm:text-sm font-sans-clean text-stone-600 leading-relaxed italic">
-                    &ldquo;{w.message}&rdquo;
-                  </p>
-                </div>
-              ))}
-            </div>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#faf7f2] text-[#6d5642] border border-[#e6ddd0] font-serif-luxury">
+                        <Palette className="w-2.5 h-2.5 text-amber-700" />
+                        <span>White &amp; Beige Theme</span>
+                      </span>
+                    </div>
+
+                    {/* Blessing Quote Body */}
+                    <div className="pt-0.5">
+                      <p className="text-xs sm:text-sm font-sans-clean text-stone-700 leading-relaxed italic bg-[#fcfaf7] px-3.5 py-2.5 rounded-xl border border-[#eee4d6]">
+                        &ldquo;{w.message}&rdquo;
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
 
       {/* SECTION 7: WISHING WELL & REGISTRY */}
-      <section className="p-8 sm:p-10 rounded-3xl bg-gradient-to-tr from-pink-50 via-white to-pink-50 border border-pink-200/90 text-center max-w-2xl mx-auto space-y-4 shadow-sm">
-        <div className="w-12 h-12 rounded-full bg-pink-100 text-pink-600 flex items-center justify-center mx-auto">
+      <section className="p-8 sm:p-10 rounded-3xl bg-gradient-to-tr from-[#faf6ee] via-white to-[#f5eee2] border border-[#ded2be] text-center max-w-2xl mx-auto space-y-4 shadow-xs">
+        <div className="w-12 h-12 rounded-full bg-[#f4ece0] text-amber-800 flex items-center justify-center mx-auto border border-[#ded2be]">
           <Gift className="w-6 h-6" />
         </div>
         <h3 className="text-2xl font-serif-luxury font-bold text-stone-900">
           The Wishing Well
         </h3>
         <p className="text-xs sm:text-sm font-sans-clean text-stone-600 leading-relaxed">
-          Your presence at our wedding is the greatest gift of all. However, should you wish to honour us with a gift, a wishing well will be placed at the reception to help us build our new home and embark on our dream honeymoon.
+          Your warm presence and heartfelt prayers on our wedding day are the greatest gift of all. Should you wish to bless us with a token of love, a wishing well will be placed at the reception to help us build our new home together.
         </p>
-        <div className="pt-2 text-xs font-serif-luxury italic text-stone-400">
+        <div className="pt-2 text-xs font-serif-luxury italic text-[#7b6552]">
           With all our love and gratitude, {config.brideName} &amp; {config.groomName}
         </div>
       </section>
 
       {/* FOOTER ACTIONS */}
-      <footer className="pt-12 border-t border-pink-200/60 text-center space-y-6">
+      <footer className="pt-12 border-t border-[#dfd2be]/70 text-center space-y-6">
         <div className="flex flex-wrap items-center justify-center gap-4">
           <button
+            type="button"
             onClick={onReplayEnvelope}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white hover:bg-pink-50 border border-pink-200 text-stone-700 text-xs font-serif-luxury uppercase tracking-wider transition-all shadow-sm hover:scale-105 active:scale-95 cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white hover:bg-[#faf5ee] border border-[#d8c9b2] text-stone-700 text-xs font-serif-luxury uppercase tracking-wider transition-all shadow-xs hover:scale-105 active:scale-95 cursor-pointer"
           >
-            <RotateCcw className="w-3.5 h-3.5 text-pink-500" />
+            <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
             Fold Back Letter &bull; Replay Opening
           </button>
         </div>
 
-        <p className="text-xs font-serif-luxury text-stone-400 tracking-wider">
-          Crafted with love &bull; Pink &amp; White Sakura Wedding Invitation
+        <p className="text-xs font-serif-luxury text-stone-500 tracking-wider">
+          Crafted with love &bull; White &amp; Beige Wedding Celebration &bull; Islamabad 2026
         </p>
       </footer>
     </div>

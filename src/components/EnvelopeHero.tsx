@@ -91,17 +91,17 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
             transition={{ duration: 0.9, ease: smoothLuxuryEase }}
             className="text-center z-10 max-w-sm sm:max-w-md mx-auto px-4"
           >
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/90 backdrop-blur-md border border-pink-200/90 text-pink-900 text-[10px] xs:text-xs font-serif-luxury tracking-widest uppercase shadow-xs">
-              <Sparkles className="w-3 h-3 text-pink-500" />
-              The Royal Wedding
-              <Sparkles className="w-3 h-3 text-pink-500" />
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/95 backdrop-blur-md border border-[#dfd2be] text-[#574332] text-[10px] xs:text-xs font-serif-luxury tracking-widest uppercase shadow-xs">
+              <Sparkles className="w-3 h-3 text-amber-500" />
+              The Wedding Celebration
+              <Sparkles className="w-3 h-3 text-amber-500" />
             </span>
 
-            <h1 className="mt-1 text-2xl xs:text-3xl sm:text-4xl font-serif-luxury font-light text-pink-950 tracking-wide drop-shadow-xs leading-tight">
+            <h1 className="mt-1 text-2xl xs:text-3xl sm:text-4xl font-serif-luxury font-light text-[#2d221a] tracking-wide drop-shadow-xs leading-tight">
               Save The Date
             </h1>
 
-            <p className="text-[10px] xs:text-xs sm:text-sm font-serif-luxury italic text-stone-700 tracking-wider">
+            <p className="text-[10px] xs:text-xs sm:text-sm font-serif-luxury italic text-[#635041] tracking-wider">
               Tap the golden wax seal below to open the invitation
             </p>
           </motion.div>
@@ -114,18 +114,18 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
             transition={{ duration: 1.2, ease: smoothLuxuryEase }}
             className="text-center z-10 max-w-sm sm:max-w-md mx-auto px-4"
           >
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/90 backdrop-blur-md border border-pink-200/90 text-pink-900 text-[10px] xs:text-xs font-serif-luxury tracking-widest uppercase shadow-xs">
-              <Sparkles className="w-3 h-3 text-pink-500" />
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/95 backdrop-blur-md border border-[#dfd2be] text-[#574332] text-[10px] xs:text-xs font-serif-luxury tracking-widest uppercase shadow-xs">
+              <Sparkles className="w-3 h-3 text-amber-500" />
               The Wedding Invitation
-              <Sparkles className="w-3 h-3 text-pink-500" />
+              <Sparkles className="w-3 h-3 text-amber-500" />
             </span>
 
-            <h1 className="mt-1 text-2xl xs:text-3xl sm:text-4xl font-script text-pink-950 tracking-wide drop-shadow-xs leading-tight">
+            <h1 className="mt-1 text-2xl xs:text-3xl sm:text-4xl font-script text-[#2d221a] tracking-wide drop-shadow-xs leading-tight">
               {config.brideName} &amp; {config.groomName}
             </h1>
 
-            <p className="text-[10px] xs:text-xs sm:text-sm font-serif-luxury italic text-stone-700 tracking-wider">
-              Request the honour of your presence to celebrate their union
+            <p className="text-[10px] xs:text-xs sm:text-sm font-serif-luxury italic text-[#635041] tracking-wider">
+              Saturday, 17th October &bull; 3:00 PM &bull; Domeera Marquee
             </p>
           </motion.div>
         )}
@@ -140,7 +140,7 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
         }`}
         style={{ height: `${envelopeHeight}px` }}
       >
-        {/* Soft Golden/Rose Aura glow when card slides out */}
+        {/* Soft Golden/Warm Beige Aura glow when card slides out */}
         <AnimatePresence>
           {isOpen && (
             <motion.div
@@ -150,15 +150,15 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
               transition={{ duration: 2.2, ease: smoothLuxuryEase }}
               className="absolute inset-0 flex items-center justify-center pointer-events-none -z-1"
             >
-              <div className="w-[150%] h-[180%] rounded-full bg-gradient-to-r from-amber-200/35 via-pink-200/45 to-amber-100/35 blur-3xl" />
+              <div className="w-[150%] h-[180%] rounded-full bg-gradient-to-r from-amber-200/35 via-[#f0e3d0]/50 to-amber-100/35 blur-3xl" />
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* A. ENVELOPE BACK SLEEVE: Extends full bottom, rounded top corners */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#fff5f7] via-[#fde9ed] to-[#fce2e7] rounded-t-[28px] sm:rounded-t-[36px] shadow-2xl border-t border-x border-pink-200/90 overflow-hidden z-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#faf6ee] via-[#f4ede0] to-[#ece1cf] rounded-t-[28px] sm:rounded-t-[36px] shadow-2xl border-t border-x border-[#d8c8b0] overflow-hidden z-0">
           <div className="absolute inset-0 opacity-20 paper-texture" />
-          <div className="absolute inset-x-3 top-3 bottom-0 rounded-t-2xl border-t border-x border-dashed border-pink-300/40 pointer-events-none" />
+          <div className="absolute inset-x-3 top-3 bottom-0 rounded-t-2xl border-t border-x border-dashed border-[#c7b499]/50 pointer-events-none" />
           <div className="absolute inset-0 shadow-[inset_0_12px_24px_rgba(0,0,0,0.03)] pointer-events-none" />
         </div>
 
@@ -174,7 +174,7 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
                   y: -slideUpDistance, // Slides up out of the bottom box directly into golden reading view
                   opacity: 1,
                   scale: 1,
-                  boxShadow: '0 25px 60px -12px rgba(244, 114, 182, 0.35), 0 0 30px rgba(212, 175, 55, 0.22)',
+                  boxShadow: '0 25px 60px -12px rgba(180, 140, 90, 0.32), 0 0 30px rgba(212, 175, 55, 0.25)',
                 }
               : {
                   y: 50, // 100% tucked inside the bottom letter box
@@ -194,12 +194,12 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
             transformOrigin: 'center bottom',
             pointerEvents: isOpen ? 'auto' : 'none',
           }}
-          className="absolute inset-x-3 xs:inset-x-5 sm:inset-x-8 md:inset-x-12 max-w-[480px] mx-auto bg-gradient-to-b from-[#fffefe] via-[#fffbfd] to-[#fff7f8] rounded-2xl p-3.5 xs:p-4 sm:p-6 flex flex-col items-center justify-between text-center border-2 border-amber-300/85 shadow-2xl z-10 overflow-hidden"
+          className="absolute inset-x-3 xs:inset-x-5 sm:inset-x-8 md:inset-x-12 max-w-[480px] mx-auto bg-gradient-to-b from-[#ffffff] via-[#fdfcf9] to-[#f9f5ee] rounded-2xl p-3.5 xs:p-4 sm:p-6 flex flex-col items-center justify-between text-center border-2 border-amber-400/85 shadow-2xl z-10 overflow-hidden"
         >
           {/* Top Silk Ribbon Pull Tab */}
           <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
-            <div className="w-14 h-5 bg-gradient-to-r from-rose-300 via-pink-200 to-rose-300 rounded-b-md border-x border-b border-pink-400/70 shadow-sm flex items-center justify-center">
-              <span className="text-[8px] font-roman uppercase tracking-widest text-pink-900 font-bold">
+            <div className="w-16 h-5 bg-gradient-to-r from-[#d6c4aa] via-[#f2e7d7] to-[#d6c4aa] rounded-b-md border-x border-b border-[#bfa98a] shadow-xs flex items-center justify-center">
+              <span className="text-[8px] font-roman uppercase tracking-widest text-[#4f3d2b] font-bold">
                 Royal Invitation
               </span>
             </div>
@@ -223,13 +223,13 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
 
           {/* Embossed Monogram Crest with Laurel Wreath */}
           <div className="relative mt-2">
-            <div className={`${isShortScreen ? 'w-10 h-10' : 'w-12 h-12 sm:w-14 sm:h-14'} rounded-full bg-gradient-to-tr from-amber-100 via-white to-pink-100 border-2 border-amber-400/90 flex items-center justify-center shadow-md`}>
+            <div className={`${isShortScreen ? 'w-10 h-10' : 'w-12 h-12 sm:w-14 sm:h-14'} rounded-full bg-gradient-to-tr from-amber-100 via-white to-[#f5ebdb] border-2 border-amber-400/90 flex items-center justify-center shadow-md`}>
               <span className={`font-serif-luxury font-bold ${isShortScreen ? 'text-base' : 'text-lg sm:text-xl'} gold-gradient-text tracking-tight`}>
                 {config.brideName.charAt(0)} &amp; {config.groomName.charAt(0)}
               </span>
             </div>
-            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-pink-500">
-              <Heart className="w-3.5 h-3.5 fill-pink-400 text-pink-500 drop-shadow-xs" />
+            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-amber-600">
+              <Heart className="w-3.5 h-3.5 fill-amber-400 text-amber-600 drop-shadow-xs" />
             </span>
           </div>
 
@@ -239,20 +239,20 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
               &bull; Together with their families &bull;
             </p>
 
-            <h2 className={`${isShortScreen ? 'text-lg xs:text-xl' : 'text-xl xs:text-2xl sm:text-3xl'} font-serif-luxury font-bold text-[#4a1824] tracking-wide leading-tight drop-shadow-xs`}>
+            <h2 className={`${isShortScreen ? 'text-lg xs:text-xl' : 'text-xl xs:text-2xl sm:text-3xl'} font-serif-luxury font-bold text-[#2d221b] tracking-wide leading-tight drop-shadow-xs`}>
               {config.brideName}
             </h2>
 
-            <p className={`${isShortScreen ? 'text-lg' : 'text-xl xs:text-2xl'} font-script text-pink-600 leading-none my-0.5`}>
+            <p className={`${isShortScreen ? 'text-lg' : 'text-xl xs:text-2xl'} font-script text-amber-700 leading-none my-0.5`}>
               &amp;
             </p>
 
-            <h2 className={`${isShortScreen ? 'text-lg xs:text-xl' : 'text-xl xs:text-2xl sm:text-3xl'} font-serif-luxury font-bold text-[#4a1824] tracking-wide leading-tight drop-shadow-xs`}>
+            <h2 className={`${isShortScreen ? 'text-lg xs:text-xl' : 'text-xl xs:text-2xl sm:text-3xl'} font-serif-luxury font-bold text-[#2d221b] tracking-wide leading-tight drop-shadow-xs`}>
               {config.groomName}
             </h2>
 
             {/* Antique Flourish Divider */}
-            <div className="flex items-center justify-center gap-1.5 text-amber-500/70 text-[10px] my-1">
+            <div className="flex items-center justify-center gap-1.5 text-amber-600/70 text-[10px] my-1">
               <span className="w-6 h-px bg-amber-300/60" />
               <span>❧ ❦ ❧</span>
               <span className="w-6 h-px bg-amber-300/60" />
@@ -262,22 +262,28 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
               Request the honour of your presence to celebrate their union
             </p>
 
-            <div className="py-1 px-3 rounded-lg bg-pink-50/70 border border-pink-200/60 inline-block my-1">
-              <p className={`${isShortScreen ? 'text-xs' : 'text-xs xs:text-sm'} font-sans-clean font-bold text-stone-800 tracking-wide`}>
-                {config.date}
+            <div className="py-1 px-3 rounded-lg bg-[#f8f4ec] border border-[#ded2c0] inline-block my-1">
+              <p className={`${isShortScreen ? 'text-xs' : 'text-xs xs:text-sm'} font-sans-clean font-bold text-stone-900 tracking-wide`}>
+                17-Oct &bull; {config.date}
               </p>
-              <p className="text-[9px] xs:text-[10px] font-sans-clean text-pink-800">
-                Ceremony at {config.ceremonyTime} &bull; Reception at {config.receptionTime}
+              <p className="text-[9px] xs:text-[10px] font-sans-clean font-semibold text-amber-800">
+                Ceremony &amp; Reception at {config.ceremonyTime}
               </p>
             </div>
 
-            <p className="text-[10px] xs:text-[11px] font-serif-luxury text-stone-800 font-semibold pt-0.5">
+            <p className="text-[10px] xs:text-[11px] font-serif-luxury text-stone-900 font-bold pt-0.5">
               {config.venueName}
             </p>
 
-            <p className="text-[8px] xs:text-[9px] sm:text-[10px] font-serif-luxury italic text-stone-500">
+            <p className="text-[8px] xs:text-[9px] sm:text-[10px] font-serif-luxury italic text-stone-600 leading-tight">
               {config.venueAddress}
             </p>
+
+            {/* Dress code reminder pill */}
+            <div className="mt-1 pt-1 border-t border-amber-200/50 flex items-center justify-center gap-1 text-[8px] xs:text-[9px] font-serif-luxury text-[#6e5842]">
+              <span className="font-semibold uppercase tracking-wider text-amber-800">Dress Theme:</span>
+              <span>White &amp; Beige</span>
+            </div>
           </div>
 
           {/* Bottom Card Action / View Details Button */}
@@ -289,10 +295,10 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
                   e.stopPropagation();
                   onScrollToDetails();
                 }}
-                className="group inline-flex items-center justify-center gap-2 w-full py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-pink-100 via-white to-pink-100 hover:from-pink-200 hover:to-pink-200 text-[10px] xs:text-xs font-serif-luxury tracking-widest uppercase text-pink-900 transition-all border border-pink-300 shadow-xs hover:shadow-md cursor-pointer"
+                className="group inline-flex items-center justify-center gap-2 w-full py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-[#f7efe3] via-[#ffffff] to-[#f7efe3] hover:from-[#eddcc8] hover:to-[#eddcc8] text-[10px] xs:text-xs font-serif-luxury tracking-widest uppercase text-[#4d3a29] transition-all border border-[#c8b79e] shadow-xs hover:shadow-md cursor-pointer"
               >
                 <span>View Full Itinerary &amp; RSVP</span>
-                <ChevronDown className="w-3.5 h-3.5 animate-bounce text-pink-600" />
+                <ChevronDown className="w-3.5 h-3.5 animate-bounce text-amber-700" />
               </button>
             ) : (
               <div className="flex items-center justify-center gap-1 text-[9px] xs:text-[10px] font-serif-luxury tracking-wider text-stone-400">
@@ -304,25 +310,25 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
 
         {/* C. ENVELOPE FRONT POCKET: Anchored at full bottom (covers lower 78% of envelope) */}
         <div 
-          className="absolute inset-x-0 bottom-0 h-[78%] bg-gradient-to-b from-[#fff6f8] via-[#fdecee] to-[#fcdde2] rounded-t-2xl sm:rounded-t-[30px] border-t border-x border-pink-200/90 shadow-md z-20 pointer-events-none overflow-hidden"
+          className="absolute inset-x-0 bottom-0 h-[78%] bg-gradient-to-b from-[#fdfbf7] via-[#f7f1e6] to-[#eee4d4] rounded-t-2xl sm:rounded-t-[30px] border-t border-x border-[#d8c8b0] shadow-md z-20 pointer-events-none overflow-hidden"
         >
           {/* Subtle decorative V-cut dip at the top mouth of the pocket */}
           <div 
-            className="absolute inset-x-0 top-0 h-9 bg-gradient-to-b from-pink-100/60 to-transparent"
+            className="absolute inset-x-0 top-0 h-9 bg-gradient-to-b from-[#f0e5d5]/60 to-transparent"
             style={{
               clipPath: 'polygon(0 0, 50% 100%, 100% 0, 100% 10%, 50% 100%, 0 10%)',
             }}
           />
           {/* Pocket top edge trim */}
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-pink-200 via-pink-300 to-pink-200" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-[#d8c8b0] via-[#c7b295] to-[#d8c8b0]" />
           
           {/* Subtle envelope texture */}
           <div className="absolute inset-0 opacity-15 paper-texture" />
           
           {/* Delicate bottom gold watermark */}
-          <div className="absolute bottom-2.5 inset-x-0 flex items-center justify-center opacity-35">
-            <span className="text-[9px] font-roman tracking-[0.3em] uppercase text-pink-900">
-              Kyoto &bull; MMXXVI
+          <div className="absolute bottom-2.5 inset-x-0 flex items-center justify-center opacity-45">
+            <span className="text-[9px] font-roman tracking-[0.3em] uppercase text-[#634e3a]">
+              Islamabad &bull; 17th October 2026
             </span>
           </div>
         </div>
@@ -347,7 +353,7 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
           className="absolute top-0 left-0 right-0 h-[48%] overflow-hidden pointer-events-none"
         >
           <div
-            className="w-full h-full bg-gradient-to-b from-[#ffedf1] to-[#ffe2e8] shadow-xs border-b border-pink-200/70"
+            className="w-full h-full bg-gradient-to-b from-[#faf6ee] to-[#ece1cf] shadow-xs border-b border-[#d8c8b0]/70"
             style={{
               clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
             }}
@@ -373,7 +379,7 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
                   transition: { duration: 1.1, ease: smoothLuxuryEase },
                 }}
                 animate={isHoveringRibbon ? { scaleY: 1.06 } : { scaleY: 1 }}
-                className="absolute w-full h-11 xs:h-12 sm:h-13 bg-gradient-to-r from-pink-300 via-rose-300 to-pink-300 shadow-md border-y border-pink-400/60 flex items-center justify-center overflow-hidden"
+                className="absolute w-full h-11 xs:h-12 sm:h-13 bg-gradient-to-r from-[#d6c4aa] via-[#ebdcc7] to-[#d6c4aa] shadow-md border-y border-[#bfa88b]/70 flex items-center justify-center overflow-hidden"
               >
                 <div className="absolute inset-x-0 top-0.5 h-0.5 bg-white/70" />
                 <div className="absolute inset-x-0 bottom-0.5 h-0.5 bg-white/40" />
@@ -388,7 +394,7 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
                   transition: { duration: 1.1, ease: smoothLuxuryEase },
                 }}
                 animate={isHoveringRibbon ? { scaleX: 1.06 } : { scaleX: 1 }}
-                className="absolute h-full w-10 xs:w-11 sm:w-12 bg-gradient-to-b from-pink-300 via-rose-300 to-pink-300 shadow-md border-x border-pink-400/60 flex items-center justify-center overflow-hidden"
+                className="absolute h-full w-10 xs:w-11 sm:w-12 bg-gradient-to-b from-[#d6c4aa] via-[#ebdcc7] to-[#d6c4aa] shadow-md border-x border-[#bfa88b]/70 flex items-center justify-center overflow-hidden"
               >
                 <div className="absolute inset-y-0 left-0.5 w-0.5 bg-white/70" />
                 <div className="absolute inset-y-0 right-0.5 w-0.5 bg-white/40" />
@@ -416,12 +422,12 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
                 aria-label="Open wedding invitation"
               >
                 {/* Soft ambient aura */}
-                <div className="absolute -inset-3 rounded-full bg-pink-400/25 blur-md group-hover:bg-pink-400/40 transition-all duration-500" />
+                <div className="absolute -inset-3 rounded-full bg-amber-400/25 blur-md group-hover:bg-amber-400/40 transition-all duration-500" />
 
                 {/* Flat Horizontal Ribbon Bow Loops */}
                 <div className="absolute inset-x-[-28px] h-6 flex items-center justify-between pointer-events-none">
-                  <div className="w-9 sm:w-11 h-4.5 rounded-full bg-gradient-to-r from-rose-300 to-pink-300 border border-pink-400/80 shadow-xs transform -rotate-6" />
-                  <div className="w-9 sm:w-11 h-4.5 rounded-full bg-gradient-to-l from-rose-300 to-pink-300 border border-pink-400/80 shadow-xs transform rotate-6" />
+                  <div className="w-9 sm:w-11 h-4.5 rounded-full bg-gradient-to-r from-[#ebdcc7] to-[#d6c4aa] border border-[#bfa88b] shadow-xs transform -rotate-6" />
+                  <div className="w-9 sm:w-11 h-4.5 rounded-full bg-gradient-to-l from-[#ebdcc7] to-[#d6c4aa] border border-[#bfa88b] shadow-xs transform rotate-6" />
                 </div>
 
                 {/* Stamped Wax Seal Medallion */}
@@ -439,8 +445,8 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
 
                 {/* Flowing Ribbon Tails below */}
                 <div className="absolute -bottom-5 sm:-bottom-6 flex items-center gap-1 pointer-events-none">
-                  <div className="w-3.5 sm:w-4 h-6 sm:h-7 bg-rose-300 border-x border-b border-pink-400 -rotate-15 transform -translate-x-1 shadow-xs" />
-                  <div className="w-3.5 sm:w-4 h-6 sm:h-7 bg-rose-300 border-x border-b border-pink-400 rotate-15 transform translate-x-1 shadow-xs" />
+                  <div className="w-3.5 sm:w-4 h-6 sm:h-7 bg-[#d8c6ac] border-x border-b border-[#bfa88b] -rotate-15 transform -translate-x-1 shadow-xs" />
+                  <div className="w-3.5 sm:w-4 h-6 sm:h-7 bg-[#d8c6ac] border-x border-b border-[#bfa88b] rotate-15 transform translate-x-1 shadow-xs" />
                 </div>
               </motion.button>
             </motion.div>
@@ -459,14 +465,14 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
             className="relative mt-auto mb-2 flex flex-col items-center text-center z-30 cursor-pointer touch-manipulation"
             onClick={onScrollToDetails}
           >
-            <span className="text-[10px] sm:text-xs font-serif-luxury tracking-[0.2em] uppercase text-pink-900 font-semibold mb-1.5 drop-shadow-xs">
+            <span className="text-[10px] sm:text-xs font-serif-luxury tracking-[0.2em] uppercase text-[#4d3a29] font-semibold mb-1.5 drop-shadow-xs">
               Scroll Down To View All Details
             </span>
-            <div className="w-6 sm:w-7 h-9 sm:h-10 rounded-full border-2 border-pink-400/80 flex items-start justify-center p-1 bg-white/80 backdrop-blur-md shadow-xs">
+            <div className="w-6 sm:w-7 h-9 sm:h-10 rounded-full border-2 border-[#bfa88b] flex items-start justify-center p-1 bg-white/85 backdrop-blur-md shadow-xs">
               <motion.div
                 animate={{ y: [0, 12, 0] }}
                 transition={{ duration: 2.0, repeat: Infinity, ease: 'easeInOut' }}
-                className="w-1.5 h-2 rounded-full bg-pink-500"
+                className="w-1.5 h-2 rounded-full bg-amber-600"
               />
             </div>
           </motion.div>

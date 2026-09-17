@@ -36,20 +36,22 @@ export default function App() {
   const [weddingConfig, setWeddingConfig] = useState<WeddingConfig>({
     brideName: 'Elena Rose Vance',
     groomName: 'Alexander James Sterling',
-    date: 'Saturday, October 24, 2026',
-    ceremonyTime: '1:00 PM',
+    date: 'Saturday, 17th October 2026',
+    ceremonyTime: '3:00 PM',
     receptionTime: '5:30 PM',
-    venueName: 'The Botanical Glasshouse Pavilion',
-    venueAddress: '108 Blossom Valley Road, Higashiyama Ward, Kyoto',
-    googleMapsUrl: 'https://maps.google.com/?q=Kyoto+Botanical+Gardens',
+    venueName: 'Domeera Marquee',
+    venueAddress: 'Service Road, Main Gulberg Expy, Koral Town, Islamabad, 46000',
+    googleMapsUrl: 'https://maps.app.goo.gl/y4cpY2b7ivEbnSxv6',
     storyQuote: 'Two souls with but a single thought, two hearts that beat as one.',
+    dressCodeGirls: 'Girls: White, Off White & Beige',
+    dressCodeBoys: 'Boys: White Shalwar Kameez & Brown Waistcoat',
   });
 
   const handleOpenEnvelope = () => {
     setIsOpen(true);
     setAudioTrigger(true);
 
-    // Trigger gentle romantic sakura blossom flutter
+    // Trigger gentle romantic blossom flutter
     if (sakuraRef.current) {
       sakuraRef.current.burst(window.innerWidth / 2, window.innerHeight * 0.45, 60);
     }
@@ -78,25 +80,25 @@ export default function App() {
 
   return (
     <main
-      className={`relative w-full text-[#4a3b32] selection:bg-pink-200 selection:text-pink-900 font-sans-clean ${
+      className={`relative w-full text-[#3d2f24] selection:bg-[#eadecc] selection:text-[#36271a] font-sans-clean ${
         isOpen ? 'min-h-[100dvh] overflow-x-hidden' : 'h-[100dvh] overflow-hidden'
       }`}
     >
-      {/* SAKURA TREE WALLPAPER WITH ROMANTIC BACK BLUR */}
+      {/* LUXURY WHITE & BEIGE MARQUEE FLORAL WALLPAPER WITH WARM BLUR */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        {/* High-resolution romantic cherry blossom tree backdrop */}
+        {/* High-resolution romantic white floral canopy backdrop */}
         <img
-          src="https://images.unsplash.com/photo-1522383225653-ed111181a951?auto=format&fit=crop&w=2000&q=85"
-          alt="Blooming Sakura Cherry Blossom Tree"
+          src="https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=2000&q=85"
+          alt="White and Warm Beige Wedding Decor Canopy"
           referrerPolicy="no-referrer"
           className="w-full h-full object-cover scale-105 filter blur-[6px] brightness-[0.98] transition-transform duration-1000 ease-out"
         />
 
-        {/* Soft frosted glass sakura pink-white overlay for high legibility */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#fff7f8]/75 via-[#fff3f6]/65 to-[#fff5f7]/80 backdrop-blur-[5px]" />
+        {/* Soft frosted glass warm white and beige overlay for high legibility */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#faf7f2]/90 via-[#f4eee6]/80 to-[#faf7f2]/95 backdrop-blur-[6px]" />
 
-        {/* Subtle radial glow centering light on the stationery card */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(255,255,255,0.7)_0%,_rgba(254,242,248,0.5)_60%,_rgba(251,207,232,0.35)_100%)]" />
+        {/* Subtle radial glow centering warm golden light on the stationery card */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(255,255,255,0.85)_0%,_rgba(248,243,235,0.65)_60%,_rgba(230,220,205,0.4)_100%)]" />
       </div>
 
       {/* Floating Canvas Falling Sakura Petals drifting over the blurred tree wallpaper */}

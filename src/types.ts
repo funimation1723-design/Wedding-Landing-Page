@@ -8,6 +8,8 @@ export interface WeddingConfig {
   venueAddress: string;
   googleMapsUrl: string;
   storyQuote: string;
+  dressCodeGirls?: string;
+  dressCodeBoys?: string;
 }
 
 export interface RSVPData {

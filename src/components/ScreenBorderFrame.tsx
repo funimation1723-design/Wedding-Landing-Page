@@ -20,26 +20,26 @@ export const ScreenBorderFrame: React.FC<ScreenBorderFrameProps> = ({ isOpen }) 
         {/* Outer Gold Metallic Line */}
         <div className="absolute left-1 xs:left-2 sm:left-3 top-0 bottom-0 w-[1.5px] bg-gradient-to-b from-transparent via-amber-300/85 to-transparent shadow-[0_0_8px_rgba(251,191,36,0.35)]" />
 
-        {/* Inner Dashed Rose-Gold Hairline */}
-        <div className="absolute left-2.5 xs:left-4 sm:left-6 top-8 bottom-8 w-[1px] border-l border-dashed border-pink-300/60" />
+        {/* Inner Dashed Champagne-Beige Hairline */}
+        <div className="absolute left-2.5 xs:left-4 sm:left-6 top-8 bottom-8 w-[1px] border-l border-dashed border-[#d8c8b2]/75" />
 
-        {/* Vertical Botanical Sakura Vine running along left edge */}
-        <div className="absolute left-1.5 xs:left-2.5 sm:left-4.5 inset-y-0 flex flex-col justify-around py-16 opacity-75">
+        {/* Vertical Botanical Garland running along left edge */}
+        <div className="absolute left-1.5 xs:left-2.5 sm:left-4.5 inset-y-0 flex flex-col justify-around py-16 opacity-80">
           {[...Array(6)].map((_, i) => (
             <motion.div
               key={`left-vine-${i}`}
               animate={{
                 rotate: [0, 4, 0, -4, 0],
-                opacity: isOpen ? [0.6, 0.95, 0.6] : 0.7,
+                opacity: isOpen ? [0.65, 1, 0.65] : 0.75,
               }}
               transition={{
                 duration: 6 + i,
                 repeat: Infinity,
                 ease: 'easeInOut',
               }}
-              className="text-[10px] xs:text-xs sm:text-sm text-pink-400/90 select-none filter drop-shadow-[0_1px_2px_rgba(244,114,182,0.4)]"
+              className="text-[10px] xs:text-xs sm:text-sm select-none filter drop-shadow-[0_1px_3px_rgba(180,140,90,0.3)]"
             >
-              🌸
+              {i % 2 === 0 ? '🤍' : '✨'}
             </motion.div>
           ))}
         </div>
@@ -55,26 +55,26 @@ export const ScreenBorderFrame: React.FC<ScreenBorderFrameProps> = ({ isOpen }) 
         {/* Outer Gold Metallic Line */}
         <div className="absolute right-1 xs:right-2 sm:right-3 top-0 bottom-0 w-[1.5px] bg-gradient-to-b from-transparent via-amber-300/85 to-transparent shadow-[0_0_8px_rgba(251,191,36,0.35)]" />
 
-        {/* Inner Dashed Rose-Gold Hairline */}
-        <div className="absolute right-2.5 xs:right-4 sm:right-6 top-8 bottom-8 w-[1px] border-r border-dashed border-pink-300/60" />
+        {/* Inner Dashed Champagne-Beige Hairline */}
+        <div className="absolute right-2.5 xs:right-4 sm:right-6 top-8 bottom-8 w-[1px] border-r border-dashed border-[#d8c8b2]/75" />
 
-        {/* Vertical Botanical Sakura Vine running along right edge */}
-        <div className="absolute right-1.5 xs:right-2.5 sm:right-4.5 inset-y-0 flex flex-col justify-around py-16 opacity-75">
+        {/* Vertical Botanical Garland running along right edge */}
+        <div className="absolute right-1.5 xs:right-2.5 sm:right-4.5 inset-y-0 flex flex-col justify-around py-16 opacity-80">
           {[...Array(6)].map((_, i) => (
             <motion.div
               key={`right-vine-${i}`}
               animate={{
                 rotate: [0, -4, 0, 4, 0],
-                opacity: isOpen ? [0.6, 0.95, 0.6] : 0.7,
+                opacity: isOpen ? [0.65, 1, 0.65] : 0.75,
               }}
               transition={{
                 duration: 6.5 + i,
                 repeat: Infinity,
                 ease: 'easeInOut',
               }}
-              className="text-[10px] xs:text-xs sm:text-sm text-pink-400/90 select-none filter drop-shadow-[0_1px_2px_rgba(244,114,182,0.4)]"
+              className="text-[10px] xs:text-xs sm:text-sm select-none filter drop-shadow-[0_1px_3px_rgba(180,140,90,0.3)]"
             >
-              🌸
+              {i % 2 === 0 ? '🤍' : '✨'}
             </motion.div>
           ))}
         </div>
@@ -113,8 +113,8 @@ export const ScreenBorderFrame: React.FC<ScreenBorderFrameProps> = ({ isOpen }) 
             fill="url(#goldGrad)"
             opacity="0.8"
           />
-          {/* Central Blossom Center Node */}
-          <circle cx="20" cy="20" r="4.5" fill="#f472b6" stroke="#fef08a" strokeWidth="1.5" />
+          {/* Central Ivory Pearl Center Node */}
+          <circle cx="20" cy="20" r="4.5" fill="#faf6ee" stroke="#d4af37" strokeWidth="1.8" />
         </svg>
       </motion.div>
 
@@ -139,7 +139,7 @@ export const ScreenBorderFrame: React.FC<ScreenBorderFrameProps> = ({ isOpen }) 
           />
           <path
             d="M 12 85 L 12 30 C 12 20 20 12 30 12 L 85 12"
-            stroke="url(#roseGoldGrad)"
+            stroke="url(#champagneGrad)"
             strokeWidth="1.2"
             strokeDasharray="3 3"
           />
@@ -148,7 +148,7 @@ export const ScreenBorderFrame: React.FC<ScreenBorderFrameProps> = ({ isOpen }) 
             fill="url(#goldGrad)"
             opacity="0.8"
           />
-          <circle cx="20" cy="20" r="4.5" fill="#f472b6" stroke="#fef08a" strokeWidth="1.5" />
+          <circle cx="20" cy="20" r="4.5" fill="#faf6ee" stroke="#d4af37" strokeWidth="1.8" />
         </svg>
       </motion.div>
 
@@ -173,7 +173,7 @@ export const ScreenBorderFrame: React.FC<ScreenBorderFrameProps> = ({ isOpen }) 
           />
           <path
             d="M 12 85 L 12 30 C 12 20 20 12 30 12 L 85 12"
-            stroke="url(#roseGoldGrad)"
+            stroke="url(#champagneGrad)"
             strokeWidth="1.2"
             strokeDasharray="3 3"
           />
@@ -182,7 +182,7 @@ export const ScreenBorderFrame: React.FC<ScreenBorderFrameProps> = ({ isOpen }) 
             fill="url(#goldGrad)"
             opacity="0.8"
           />
-          <circle cx="20" cy="20" r="4.5" fill="#f472b6" stroke="#fef08a" strokeWidth="1.5" />
+          <circle cx="20" cy="20" r="4.5" fill="#faf6ee" stroke="#d4af37" strokeWidth="1.8" />
         </svg>
       </motion.div>
 
@@ -207,7 +207,7 @@ export const ScreenBorderFrame: React.FC<ScreenBorderFrameProps> = ({ isOpen }) 
           />
           <path
             d="M 12 85 L 12 30 C 12 20 20 12 30 12 L 85 12"
-            stroke="url(#roseGoldGrad)"
+            stroke="url(#champagneGrad)"
             strokeWidth="1.2"
             strokeDasharray="3 3"
           />
@@ -216,7 +216,7 @@ export const ScreenBorderFrame: React.FC<ScreenBorderFrameProps> = ({ isOpen }) 
             fill="url(#goldGrad)"
             opacity="0.8"
           />
-          <circle cx="20" cy="20" r="4.5" fill="#f472b6" stroke="#fef08a" strokeWidth="1.5" />
+          <circle cx="20" cy="20" r="4.5" fill="#faf6ee" stroke="#d4af37" strokeWidth="1.8" />
         </svg>
       </motion.div>
 
@@ -225,13 +225,13 @@ export const ScreenBorderFrame: React.FC<ScreenBorderFrameProps> = ({ isOpen }) 
         <defs>
           <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#fef08a" />
-            <stop offset="50%" stopColor="#f59e0b" />
-            <stop offset="100%" stopColor="#b45309" />
+            <stop offset="50%" stopColor="#d4af37" />
+            <stop offset="100%" stopColor="#926c15" />
           </linearGradient>
-          <linearGradient id="roseGoldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#fbcfe8" />
-            <stop offset="50%" stopColor="#f472b6" />
-            <stop offset="100%" stopColor="#fda4af" />
+          <linearGradient id="champagneGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fdfbf7" />
+            <stop offset="50%" stopColor="#d8c7b0" />
+            <stop offset="100%" stopColor="#ad997e" />
           </linearGradient>
         </defs>
       </svg>
