@@ -6,6 +6,7 @@ import { EnvelopeHero } from './components/EnvelopeHero';
 import { InvitationContent } from './components/InvitationContent';
 import { FloatingNavbar } from './components/FloatingNavbar';
 import { CustomizerModal } from './components/CustomizerModal';
+import { ScreenBorderFrame } from './components/ScreenBorderFrame';
 import { WeddingConfig } from './types';
 
 export default function App() {
@@ -100,6 +101,9 @@ export default function App() {
 
       {/* Floating Canvas Falling Sakura Petals drifting over the blurred tree wallpaper */}
       <SakuraCanvas ref={sakuraRef} density={35} interactive={true} />
+
+      {/* Screen Left and Right Border Frame with Ornate Gold Corners & Transitions */}
+      <ScreenBorderFrame isOpen={isOpen} />
 
       {/* Floating Audio Player for Romantic Melody */}
       <AudioPlayer autoPlayTrigger={audioTrigger} />

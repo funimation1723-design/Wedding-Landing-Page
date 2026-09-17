@@ -81,26 +81,55 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
       }`}
     >
       {/* 1. TOP WELCOME GREETING HEADER */}
-      <motion.div
-        initial={{ opacity: 0, y: -15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 1.2, ease: smoothLuxuryEase }}
-        className="text-center z-10 max-w-sm sm:max-w-md mx-auto px-4"
-      >
-        <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/90 backdrop-blur-md border border-pink-200/90 text-pink-900 text-[10px] xs:text-xs font-serif-luxury tracking-widest uppercase shadow-xs">
-          <Sparkles className="w-3 h-3 text-pink-500" />
-          The Wedding Invitation
-          <Sparkles className="w-3 h-3 text-pink-500" />
-        </span>
+      <AnimatePresence mode="wait">
+        {!isOpen ? (
+          <motion.div
+            key="sealed-header"
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.9, ease: smoothLuxuryEase }}
+            className="text-center z-10 max-w-sm sm:max-w-md mx-auto px-4"
+          >
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/90 backdrop-blur-md border border-pink-200/90 text-pink-900 text-[10px] xs:text-xs font-serif-luxury tracking-widest uppercase shadow-xs">
+              <Sparkles className="w-3 h-3 text-pink-500" />
+              The Royal Wedding
+              <Sparkles className="w-3 h-3 text-pink-500" />
+            </span>
 
-        <h1 className="mt-1 text-2xl xs:text-3xl sm:text-4xl font-script text-pink-950 tracking-wide drop-shadow-xs leading-tight">
-          {config.brideName} &amp; {config.groomName}
-        </h1>
+            <h1 className="mt-1 text-2xl xs:text-3xl sm:text-4xl font-serif-luxury font-light text-pink-950 tracking-wide drop-shadow-xs leading-tight">
+              Save The Date
+            </h1>
 
-        <p className="text-[10px] xs:text-xs sm:text-sm font-serif-luxury italic text-stone-700 tracking-wider">
-          Request the honour of your presence to celebrate their union
-        </p>
-      </motion.div>
+            <p className="text-[10px] xs:text-xs sm:text-sm font-serif-luxury italic text-stone-700 tracking-wider">
+              Tap the golden wax seal below to open the invitation
+            </p>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="opened-header"
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 1.2, ease: smoothLuxuryEase }}
+            className="text-center z-10 max-w-sm sm:max-w-md mx-auto px-4"
+          >
+            <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/90 backdrop-blur-md border border-pink-200/90 text-pink-900 text-[10px] xs:text-xs font-serif-luxury tracking-widest uppercase shadow-xs">
+              <Sparkles className="w-3 h-3 text-pink-500" />
+              The Wedding Invitation
+              <Sparkles className="w-3 h-3 text-pink-500" />
+            </span>
+
+            <h1 className="mt-1 text-2xl xs:text-3xl sm:text-4xl font-script text-pink-950 tracking-wide drop-shadow-xs leading-tight">
+              {config.brideName} &amp; {config.groomName}
+            </h1>
+
+            <p className="text-[10px] xs:text-xs sm:text-sm font-serif-luxury italic text-stone-700 tracking-wider">
+              Request the honour of your presence to celebrate their union
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 2. THE GRAND BOTTOM LETTER BOX & SLIDING INVITATION CARD */}
       {/* Anchored at the full bottom of the screen - no small floating box in center */}
@@ -133,9 +162,9 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
           <div className="absolute inset-0 shadow-[inset_0_12px_24px_rgba(0,0,0,0.03)] pointer-events-none" />
         </div>
 
-        {/* B. THE INVITATION CARD: Tucked 100% inside bottom box when closed; slides smoothly UP into full clear view when opened */}
+        {/* B. THE INVITATION CARD: Fully HIDDEN inside bottom letter box when closed; slides smoothly UP into full view when opened */}
         <motion.div
-          drag={!isOpen ? 'y' : false}
+          drag={isOpen ? false : 'y'}
           dragConstraints={{ top: -400, bottom: 0 }}
           dragElastic={0.2}
           onDragEnd={handleDragEnd}
@@ -144,12 +173,14 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
               ? {
                   y: -slideUpDistance, // Slides up out of the bottom box directly into golden reading view
                   opacity: 1,
+                  scale: 1,
                   boxShadow: '0 25px 60px -12px rgba(244, 114, 182, 0.35), 0 0 30px rgba(212, 175, 55, 0.22)',
                 }
               : {
-                  y: 0, // 100% tucked inside the bottom letter box
-                  opacity: 0.98,
-                  boxShadow: '0 4px 15px rgba(0, 0, 0, 0.05)',
+                  y: 50, // 100% tucked inside the bottom letter box
+                  opacity: 0, // Fully concealed when closed: no names or text peek out!
+                  scale: 0.96,
+                  boxShadow: '0 0 0 rgba(0, 0, 0, 0)',
                 }
           }
           transition={{
@@ -161,49 +192,54 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
             height: `${cardHeight}px`,
             bottom: `${cardBottomOffset}px`,
             transformOrigin: 'center bottom',
+            pointerEvents: isOpen ? 'auto' : 'none',
           }}
-          className="absolute inset-x-3 xs:inset-x-5 sm:inset-x-8 md:inset-x-12 max-w-[480px] mx-auto bg-white rounded-2xl p-3.5 xs:p-4 sm:p-6 flex flex-col items-center justify-between text-center border border-amber-200/90 shadow-lg z-10 overflow-hidden"
+          className="absolute inset-x-3 xs:inset-x-5 sm:inset-x-8 md:inset-x-12 max-w-[480px] mx-auto bg-gradient-to-b from-[#fffefe] via-[#fffbfd] to-[#fff7f8] rounded-2xl p-3.5 xs:p-4 sm:p-6 flex flex-col items-center justify-between text-center border-2 border-amber-300/85 shadow-2xl z-10 overflow-hidden"
         >
           {/* Top Silk Ribbon Pull Tab */}
           <div className="absolute -top-1 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center pointer-events-none">
-            <div className="w-12 h-4.5 bg-gradient-to-r from-rose-300 via-pink-200 to-rose-300 rounded-b-md border-x border-b border-pink-400/60 shadow-xs flex items-center justify-center">
-              <span className="text-[8px] font-roman uppercase tracking-widest text-pink-900 font-semibold">
-                Invitation
+            <div className="w-14 h-5 bg-gradient-to-r from-rose-300 via-pink-200 to-rose-300 rounded-b-md border-x border-b border-pink-400/70 shadow-sm flex items-center justify-center">
+              <span className="text-[8px] font-roman uppercase tracking-widest text-pink-900 font-bold">
+                Royal Invitation
               </span>
             </div>
           </div>
 
-          {/* Gold Foil Delicate Double-Lined Inner Frame */}
-          <div className="absolute inset-2 sm:inset-3 rounded-xl border border-amber-300/60 pointer-events-none p-1.5 flex flex-col justify-between">
-            <div className="flex justify-between text-amber-500/70 text-[9px] sm:text-xs">
-              <span>&#10050;</span>
-              <span>&#10050;</span>
+          {/* Luxury Double-Lined Gold Foil Inner Frame with Filigree Corner Accents */}
+          <div className="absolute inset-2 sm:inset-3 rounded-xl border border-dashed border-amber-300/60 pointer-events-none p-1 flex flex-col justify-between">
+            {/* Top Corners */}
+            <div className="flex justify-between items-center text-amber-500/80 text-[10px] sm:text-xs">
+              <span>❧</span>
+              <div className="w-8 sm:w-16 h-px bg-amber-300/40" />
+              <span>❧</span>
             </div>
-            <div className="flex justify-between text-amber-500/70 text-[9px] sm:text-xs">
-              <span>&#10050;</span>
-              <span>&#10050;</span>
+            {/* Bottom Corners */}
+            <div className="flex justify-between items-center text-amber-500/80 text-[10px] sm:text-xs">
+              <span className="transform rotate-180">❧</span>
+              <div className="w-8 sm:w-16 h-px bg-amber-300/40" />
+              <span className="transform rotate-180">❧</span>
             </div>
           </div>
 
-          {/* Monogram Crest with Laurel Leaves */}
-          <div className="relative mt-1">
-            <div className={`${isShortScreen ? 'w-10 h-10' : 'w-12 h-12 sm:w-14 sm:h-14'} rounded-full bg-gradient-to-tr from-pink-50 via-white to-pink-100 border border-amber-300/80 flex items-center justify-center shadow-xs`}>
+          {/* Embossed Monogram Crest with Laurel Wreath */}
+          <div className="relative mt-2">
+            <div className={`${isShortScreen ? 'w-10 h-10' : 'w-12 h-12 sm:w-14 sm:h-14'} rounded-full bg-gradient-to-tr from-amber-100 via-white to-pink-100 border-2 border-amber-400/90 flex items-center justify-center shadow-md`}>
               <span className={`font-serif-luxury font-bold ${isShortScreen ? 'text-base' : 'text-lg sm:text-xl'} gold-gradient-text tracking-tight`}>
                 {config.brideName.charAt(0)} &amp; {config.groomName.charAt(0)}
               </span>
             </div>
-            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-pink-400">
-              <Heart className="w-3 h-3 fill-pink-300 text-pink-400" />
+            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-pink-500">
+              <Heart className="w-3.5 h-3.5 fill-pink-400 text-pink-500 drop-shadow-xs" />
             </span>
           </div>
 
           {/* Full Card Wedding Details Typography */}
-          <div className={`space-y-1 my-auto max-w-xs ${isShortScreen ? 'py-0' : 'py-1'}`}>
-            <p className="text-[9px] sm:text-[10px] font-roman tracking-[0.22em] uppercase text-stone-500">
-              Together with their families
+          <div className={`space-y-1.5 my-auto max-w-xs ${isShortScreen ? 'py-0' : 'py-1'}`}>
+            <p className="text-[9px] sm:text-[10px] font-roman tracking-[0.25em] uppercase text-stone-500 font-medium">
+              &bull; Together with their families &bull;
             </p>
 
-            <h2 className={`${isShortScreen ? 'text-lg xs:text-xl' : 'text-xl xs:text-2xl sm:text-3xl'} font-serif-luxury font-semibold text-[#5a2e38] tracking-wide leading-tight`}>
+            <h2 className={`${isShortScreen ? 'text-lg xs:text-xl' : 'text-xl xs:text-2xl sm:text-3xl'} font-serif-luxury font-bold text-[#4a1824] tracking-wide leading-tight drop-shadow-xs`}>
               {config.brideName}
             </h2>
 
@@ -211,25 +247,31 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
               &amp;
             </p>
 
-            <h2 className={`${isShortScreen ? 'text-lg xs:text-xl' : 'text-xl xs:text-2xl sm:text-3xl'} font-serif-luxury font-semibold text-[#5a2e38] tracking-wide leading-tight`}>
+            <h2 className={`${isShortScreen ? 'text-lg xs:text-xl' : 'text-xl xs:text-2xl sm:text-3xl'} font-serif-luxury font-bold text-[#4a1824] tracking-wide leading-tight drop-shadow-xs`}>
               {config.groomName}
             </h2>
 
-            <p className="text-[9px] xs:text-[10px] sm:text-[11px] font-serif-luxury italic text-stone-600">
+            {/* Antique Flourish Divider */}
+            <div className="flex items-center justify-center gap-1.5 text-amber-500/70 text-[10px] my-1">
+              <span className="w-6 h-px bg-amber-300/60" />
+              <span>❧ ❦ ❧</span>
+              <span className="w-6 h-px bg-amber-300/60" />
+            </div>
+
+            <p className="text-[9px] xs:text-[10px] sm:text-[11px] font-serif-luxury italic text-stone-600 leading-tight">
               Request the honour of your presence to celebrate their union
             </p>
 
-            <div className="w-16 h-px bg-gradient-to-r from-transparent via-amber-300 to-transparent mx-auto my-1" />
+            <div className="py-1 px-3 rounded-lg bg-pink-50/70 border border-pink-200/60 inline-block my-1">
+              <p className={`${isShortScreen ? 'text-xs' : 'text-xs xs:text-sm'} font-sans-clean font-bold text-stone-800 tracking-wide`}>
+                {config.date}
+              </p>
+              <p className="text-[9px] xs:text-[10px] font-sans-clean text-pink-800">
+                Ceremony at {config.ceremonyTime} &bull; Reception at {config.receptionTime}
+              </p>
+            </div>
 
-            <p className={`${isShortScreen ? 'text-xs' : 'text-xs xs:text-sm sm:text-base'} font-sans-clean font-semibold text-stone-800 tracking-wide`}>
-              {config.date}
-            </p>
-
-            <p className="text-[10px] xs:text-[11px] font-sans-clean text-stone-600">
-              Ceremony at {config.ceremonyTime} &bull; Reception at {config.receptionTime}
-            </p>
-
-            <p className="text-[10px] xs:text-[11px] font-serif-luxury text-pink-900 font-medium pt-0.5">
+            <p className="text-[10px] xs:text-[11px] font-serif-luxury text-stone-800 font-semibold pt-0.5">
               {config.venueName}
             </p>
 
@@ -239,7 +281,7 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
           </div>
 
           {/* Bottom Card Action / View Details Button */}
-          <div className="w-full pt-1.5 border-t border-amber-200/50">
+          <div className="w-full pt-1.5 border-t border-amber-200/60">
             {isOpen ? (
               <button
                 type="button"
@@ -247,14 +289,14 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
                   e.stopPropagation();
                   onScrollToDetails();
                 }}
-                className="group inline-flex items-center justify-center gap-1.5 w-full py-1.5 sm:py-2 rounded-full bg-pink-50 hover:bg-pink-100 text-[10px] xs:text-xs font-serif-luxury tracking-widest uppercase text-pink-900 transition-colors border border-pink-200/80 shadow-xs cursor-pointer"
+                className="group inline-flex items-center justify-center gap-2 w-full py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-pink-100 via-white to-pink-100 hover:from-pink-200 hover:to-pink-200 text-[10px] xs:text-xs font-serif-luxury tracking-widest uppercase text-pink-900 transition-all border border-pink-300 shadow-xs hover:shadow-md cursor-pointer"
               >
                 <span>View Full Itinerary &amp; RSVP</span>
                 <ChevronDown className="w-3.5 h-3.5 animate-bounce text-pink-600" />
               </button>
             ) : (
               <div className="flex items-center justify-center gap-1 text-[9px] xs:text-[10px] font-serif-luxury tracking-wider text-stone-400">
-                <span>Formal Invitation Inside</span>
+                <span>Formal Invitation Sealed Inside</span>
               </div>
             )}
           </div>
