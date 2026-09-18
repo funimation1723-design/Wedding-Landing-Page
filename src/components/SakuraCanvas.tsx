@@ -34,12 +34,12 @@ export const SakuraCanvas = forwardRef<SakuraCanvasHandle, SakuraCanvasProps>(
     const mousePos = useRef<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
 
     const petalColors = [
-      'rgba(255, 255, 255, 0.95)', // pure white rose petal
-      'rgba(253, 250, 245, 0.92)', // warm ivory
-      'rgba(247, 242, 233, 0.88)', // off-white / jasmine
-      'rgba(238, 227, 212, 0.82)', // warm beige / champagne
-      'rgba(245, 238, 225, 0.90)', // soft cream
-      'rgba(224, 204, 175, 0.75)', // delicate antique gold sparkle
+      'rgba(255, 249, 245, 0.96)', // warm ivory #FFF9F5
+      'rgba(239, 212, 228, 0.92)', // soft blush pink #EFD4E4
+      'rgba(248, 238, 242, 0.94)', // ivory pink #F8EEF2
+      'rgba(232, 192, 208, 0.88)', // powder pink #E8C0D0
+      'rgba(216, 191, 165, 0.78)', // soft champagne #D8BFA5
+      'rgba(155, 165, 143, 0.72)', // muted sage green leaf touch #9BA58F
     ];
 
     const createPetal = (w: number, h: number, startAtTop = true): Petal => {
@@ -125,7 +125,7 @@ export const SakuraCanvas = forwardRef<SakuraCanvasHandle, SakuraCanvasProps>(
         ctx.scale(scaleX, scaleY);
 
         ctx.fillStyle = p.color;
-        ctx.shadowColor = 'rgba(255, 182, 193, 0.4)';
+        ctx.shadowColor = 'rgba(232, 192, 208, 0.45)';
         ctx.shadowBlur = 4;
         ctx.globalAlpha = p.opacity;
 

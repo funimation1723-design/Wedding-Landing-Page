@@ -5,10 +5,8 @@ import {
   Clock,
   MapPin,
   Heart,
-  Send,
   Sparkles,
   Music2,
-  CheckCircle2,
   Copy,
   ExternalLink,
   Gift,
@@ -20,16 +18,8 @@ import {
   Church,
   UtensilsCrossed,
   PartyPopper,
-  Loader2,
-  Check,
-  RefreshCw,
 } from 'lucide-react';
-import { WeddingConfig, RSVPData, ScheduleEvent } from '../types';
-import {
-  fetchWishesFromGoogleSheet,
-  normalizeGoogleSheetUrl,
-  DEFAULT_GOOGLE_SHEET_URL,
-} from '../utils/googleSheetSync';
+import { WeddingConfig, ScheduleEvent } from '../types';
 
 interface InvitationContentProps {
   config: WeddingConfig;
@@ -88,181 +78,8 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  // RSVP Form State
-  const [rsvpForm, setRsvpForm] = useState({
-    name: '',
-    attending: 'yes' as 'yes' | 'no',
-    guestCount: 1,
-    attireChecked: true,
-    message: '',
-  });
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [rsvpSubmitted, setRsvpSubmitted] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState(false);
-
-  // Live Wishes Wall & Local Submissions Persistence
-  const [localSubmissions, setLocalSubmissions] = useState<RSVPData[]>(() => {
-    try {
-      const saved = localStorage.getItem('wedding_local_submissions');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [wishes, setWishes] = useState<RSVPData[]>(() => {
-    try {
-      const saved = localStorage.getItem('wedding_local_submissions');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [wishLikes, setWishLikes] = useState<{ [id: string]: number }>({});
-  const [isSyncingSheet, setIsSyncingSheet] = useState(false);
-
-  const syncFromSheet = async () => {
-    if (!DEFAULT_GOOGLE_SHEET_URL) return;
-
-    setIsSyncingSheet(true);
-    try {
-      const sheetWishes = await fetchWishesFromGoogleSheet(DEFAULT_GOOGLE_SHEET_URL);
-
-      // Read current local submissions (to prevent losing newly submitted responses while Google CDN updates)
-      let currentLocal: RSVPData[] = [];
-      try {
-        const saved = localStorage.getItem('wedding_local_submissions');
-        if (saved) currentLocal = JSON.parse(saved);
-      } catch {}
-
-      // Keep only local submissions that haven't appeared in the Google Sheet yet
-      const stillPendingLocal: RSVPData[] = [];
-      currentLocal.forEach((localItem) => {
-        const alreadyInSheet = sheetWishes.some(
-          (sw) =>
-            sw.name.trim().toLowerCase() === localItem.name.trim().toLowerCase() &&
-            sw.message.trim().toLowerCase() === localItem.message.trim().toLowerCase()
-        );
-        if (!alreadyInSheet) {
-          stillPendingLocal.push(localItem);
-        }
-      });
-
-      // Update storage so we don't accumulate outdated pending copies
-      try {
-        localStorage.setItem('wedding_local_submissions', JSON.stringify(stillPendingLocal));
-      } catch {}
-      setLocalSubmissions(stillPendingLocal);
-
-      // Merge: Unmatched local submissions on top, followed by official sheet entries
-      const merged = [...stillPendingLocal, ...sheetWishes];
-      setWishes(merged);
-    } catch (err: any) {
-      console.warn('Google Sheet fetch error:', err);
-    } finally {
-      setIsSyncingSheet(false);
-    }
-  };
-
-  useEffect(() => {
-    syncFromSheet();
-    const interval = setInterval(() => {
-      syncFromSheet();
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleLikeWish = (id: string) => {
-    setWishLikes((prev) => ({
-      ...prev,
-      [id]: (prev[id] || 0) + 1,
-    }));
-    onShowerPetals();
-  };
-
-  const handleRsvpSubmit = async (e: React.FormEvent) => {
-    if (!rsvpForm.name.trim()) {
-      e.preventDefault();
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    const attireText = rsvpForm.attireChecked
-      ? 'White & Beige Theme Confirmed'
-      : 'White & Beige Theme';
-
-    const attendanceText =
-      rsvpForm.attending === 'yes' ? 'Joyfully Accept' : 'Regretfully Decline';
-
-    const guestsText =
-      rsvpForm.attending === 'yes'
-        ? `${rsvpForm.guestCount} ${rsvpForm.guestCount === 1 ? 'Guest' : 'Guests'}`
-        : '0 Guests';
-
-    const messageText =
-      rsvpForm.message.trim() ||
-      'Sending our deepest love and warmest prayers on your blessed wedding day!';
-
-    // Direct background sync with Google Forms action endpoint
-    try {
-      const formData = new URLSearchParams();
-      formData.append('entry.1411766687', rsvpForm.name.trim());
-      formData.append('entry.1837360552', attireText);
-      formData.append('entry.1641608483', attendanceText);
-      formData.append('entry.459360220', guestsText);
-      formData.append('entry.134681084', attireText);
-      formData.append('entry.2045044766', messageText);
-
-      fetch(
-        'https://docs.google.com/forms/u/0/d/e/1FAIpQLSc1XEEIKvYaoZqRTjW-uWKcxZU3OVB1Z3OwTSpXjpj26kPU4Q/formResponse',
-        {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: formData.toString(),
-        }
-      ).catch(() => {});
-    } catch {
-      // Background catch
-    }
-
-    const newWish: RSVPData = {
-      id: `local-${Date.now()}-${rsvpForm.name.trim().toLowerCase().replace(/\s+/g, '')}`,
-      name: rsvpForm.name.trim(),
-      attending: rsvpForm.attending,
-      guestCount: rsvpForm.attending === 'yes' ? rsvpForm.guestCount : 0,
-      dietary: attireText,
-      message: messageText,
-      timestamp: 'Just now',
-    };
-
-    // Save to local submissions immediately so it will NEVER vanish
-    const updatedLocal = [newWish, ...localSubmissions];
-    setLocalSubmissions(updatedLocal);
-    try {
-      localStorage.setItem('wedding_local_submissions', JSON.stringify(updatedLocal));
-    } catch {}
-
-    // Immediately display at the top of wishes
-    setWishes((prev) => [newWish, ...prev.filter((w) => w.id !== newWish.id)]);
-
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setRsvpSubmitted(true);
-      onShowerPetals();
-
-      // Trigger re-sync in background after 4 seconds
-      setTimeout(() => {
-        syncFromSheet();
-      }, 4000);
-    }, 700);
-  };
 
   const handleShare = () => {
     if (navigator.clipboard) {
@@ -771,366 +588,36 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
         </div>
       </section>
 
-      {/* SECTION 6: INTERACTIVE RSVP & LIVE BLESSINGS WALL */}
-      <section id="rsvp" className="space-y-12">
-        <div className="text-center space-y-2">
-          <span className="text-xs font-roman uppercase tracking-[0.25em] text-[#7a644f] font-semibold">
-            Be Our Guest
-          </span>
-          <h2 className="text-3xl sm:text-4xl font-serif-luxury font-bold text-stone-900">
-            RSVP &amp; Send Your Blessings
-          </h2>
-          <p className="text-xs font-sans-clean text-stone-500">
-            Kindly respond by October 5, 2026 to help us finalize arrangements
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* RSVP FORM (Left column) */}
-          <div className="lg:col-span-6 p-6 sm:p-8 rounded-2xl bg-white border border-[#dfd2be] shadow-xl">
-            {/* Hidden Iframe to catch Google Forms POST response silently */}
-            <iframe
-              name="google_rsvp_sink_iframe"
-              id="google_rsvp_sink_iframe"
-              title="Google Form Response Target"
-              className="hidden"
-              style={{ display: 'none', width: 0, height: 0, border: 'none' }}
-            />
-
-            {rsvpSubmitted ? (
-              <div className="text-center py-10 space-y-4">
-                <div className="w-16 h-16 rounded-full bg-[#f5ede2] text-amber-800 flex items-center justify-center mx-auto shadow-inner border border-[#d8c8b0]">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-                <h3 className="text-2xl font-serif-luxury font-bold text-stone-900">
-                  Thank You, {rsvpForm.name}!
-                </h3>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-serif-luxury">
-                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                  Successfully Synced with Official Wedding Registry
-                </div>
-                <p className="text-sm font-sans-clean text-stone-600 max-w-sm mx-auto">
-                  {rsvpForm.attending === 'yes'
-                    ? `Your RSVP for ${rsvpForm.guestCount} ${rsvpForm.guestCount === 1 ? 'guest' : 'guests'} has been recorded. We look forward to celebrating together in our White & Beige theme!`
-                    : 'We will deeply miss you, but thank you for your kind wishes and heartfelt prayers.'}
-                </p>
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setRsvpSubmitted(false);
-                      setRsvpForm({
-                        name: '',
-                        attending: 'yes',
-                        guestCount: 1,
-                        attireChecked: true,
-                        message: '',
-                      });
-                    }}
-                    className="px-5 py-2 rounded-full bg-[#f5ede2] hover:bg-[#ebdcc8] text-[#4f3d2b] text-xs font-serif-luxury tracking-wider uppercase transition-colors cursor-pointer border border-[#d5c5ad]"
-                  >
-                    Submit Another Response
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <form
-                action="https://docs.google.com/forms/u/0/d/e/1FAIpQLSc1XEEIKvYaoZqRTjW-uWKcxZU3OVB1Z3OwTSpXjpj26kPU4Q/formResponse"
-                method="POST"
-                target="google_rsvp_sink_iframe"
-                onSubmit={handleRsvpSubmit}
-                className="space-y-5"
-              >
-                {/* Mapped Google Form Hidden Entry Fields */}
-                <input
-                  type="hidden"
-                  name="entry.1641608483"
-                  value={rsvpForm.attending === 'yes' ? 'Joyfully Accept' : 'Regretfully Decline'}
-                />
-                <input
-                  type="hidden"
-                  name="entry.459360220"
-                  value={
-                    rsvpForm.attending === 'yes'
-                      ? `${rsvpForm.guestCount} ${rsvpForm.guestCount === 1 ? 'Guest' : 'Guests'}`
-                      : '0 Guests'
-                  }
-                />
-                <input
-                  type="hidden"
-                  name="entry.1837360552"
-                  value={rsvpForm.attireChecked ? 'White & Beige Theme Confirmed' : 'White & Beige Theme'}
-                />
-                <input
-                  type="hidden"
-                  name="entry.134681084"
-                  value={rsvpForm.attireChecked ? 'White & Beige Theme Confirmed' : 'White & Beige Theme'}
-                />
-
-                {/* Name field */}
-                <div>
-                  <label className="block text-xs font-roman uppercase tracking-wider text-stone-700 mb-1.5 font-semibold">
-                    Your Full Name(s) *
-                  </label>
-                  <input
-                    type="text"
-                    name="entry.1411766687"
-                    required
-                    value={rsvpForm.name}
-                    onChange={(e) => setRsvpForm({ ...rsvpForm, name: e.target.value })}
-                    placeholder="e.g. Mr. &amp; Mrs. Haris Khan"
-                    className="w-full px-4 py-2.5 rounded-xl border border-[#d8c9b2] focus:outline-none focus:ring-2 focus:ring-amber-500/40 bg-[#fffdfa] text-sm text-stone-800"
-                  />
-                </div>
-
-                {/* Attending Selection */}
-                <div>
-                  <label className="block text-xs font-roman uppercase tracking-wider text-stone-700 mb-1.5 font-semibold">
-                    Will You Be Attending? *
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setRsvpForm({ ...rsvpForm, attending: 'yes' })}
-                      className={`p-3 rounded-xl border text-xs font-serif-luxury font-semibold transition-all cursor-pointer ${
-                        rsvpForm.attending === 'yes'
-                          ? 'bg-[#6e533c] text-white border-[#6e533c] shadow-md'
-                          : 'bg-white text-stone-700 border-[#d8c9b2] hover:bg-[#faf5ee]'
-                      }`}
-                    >
-                      Joyfully Accept
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRsvpForm({ ...rsvpForm, attending: 'no' })}
-                      className={`p-3 rounded-xl border text-xs font-serif-luxury font-semibold transition-all cursor-pointer ${
-                        rsvpForm.attending === 'no'
-                          ? 'bg-[#6e533c] text-white border-[#6e533c] shadow-md'
-                          : 'bg-white text-stone-700 border-[#d8c9b2] hover:bg-[#faf5ee]'
-                      }`}
-                    >
-                      Regretfully Decline
-                    </button>
-                  </div>
-                </div>
-
-                {rsvpForm.attending === 'yes' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-roman uppercase tracking-wider text-stone-700 mb-1.5 font-semibold">
-                        Number of Guests
-                      </label>
-                      <select
-                        value={rsvpForm.guestCount}
-                        onChange={(e) => setRsvpForm({ ...rsvpForm, guestCount: Number(e.target.value) })}
-                        className="w-full px-3 py-2 rounded-xl border border-[#d8c9b2] bg-[#fffdfa] text-sm text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                      >
-                        <option value={1}>1 Guest</option>
-                        <option value={2}>2 Guests</option>
-                        <option value={3}>3 Guests</option>
-                        <option value={4}>4 Guests</option>
-                        <option value={5}>Family (5+)</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-roman uppercase tracking-wider text-stone-700 mb-1.5 font-semibold">
-                        Attire Theme Check
-                      </label>
-                      <label className="w-full px-3 py-2 rounded-xl border border-[#d8c9b2] bg-[#fbf8f2] text-xs text-[#523e2d] flex items-center gap-2 font-medium cursor-pointer hover:bg-[#f5ede2] transition-colors select-none">
-                        <input
-                          type="checkbox"
-                          checked={rsvpForm.attireChecked}
-                          onChange={(e) => setRsvpForm({ ...rsvpForm, attireChecked: e.target.checked })}
-                          className="w-4 h-4 rounded text-[#6e533c] focus:ring-amber-500 accent-[#6e533c]"
-                        />
-                        <span>White &amp; Beige Theme</span>
-                      </label>
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-xs font-roman uppercase tracking-wider text-stone-700 mb-1.5 font-semibold">
-                    Blessings &amp; Message for the Couple
-                  </label>
-                  <textarea
-                    name="entry.2045044766"
-                    rows={3}
-                    value={rsvpForm.message}
-                    onChange={(e) => setRsvpForm({ ...rsvpForm, message: e.target.value })}
-                    placeholder="Write a sweet congratulatory note to be displayed on our live guestbook..."
-                    className="w-full px-4 py-2.5 rounded-xl border border-[#d8c9b2] focus:outline-none focus:ring-2 focus:ring-amber-500/40 bg-[#fffdfa] text-sm text-stone-800 resize-none"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-3 rounded-full bg-gradient-to-r from-[#6e533c] via-[#85664a] to-[#6e533c] disabled:opacity-75 text-white text-xs font-serif-luxury uppercase tracking-widest font-semibold hover:shadow-lg hover:shadow-[#dfd3c0]/50 transition-all flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Syncing RSVP with Registry...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-3.5 h-3.5" />
-                      Submit RSVP &amp; Post Blessing
-                    </>
-                  )}
-                </button>
-              </form>
-            )}
-          </div>
-
-          {/* LIVE WISHES / GUESTBOOK WALL (Right column) */}
-          <div className="lg:col-span-6 space-y-4">
-            <div className="flex items-center justify-between px-2 flex-wrap gap-2">
-              <div className="flex items-center gap-2">
-                <h3 className="font-serif-luxury font-bold text-xl text-stone-900">
-                  Guest Wishes &amp; Blessings
-                </h3>
-                {wishes.length > 0 && (
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#f5ede2] text-[#554030] font-sans-clean font-semibold border border-[#e2d5c3]">
-                    {wishes.length}
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => syncFromSheet()}
-                  disabled={isSyncingSheet}
-                  className="p-1.5 rounded-full bg-[#faf5ee] text-stone-600 hover:text-stone-900 border border-[#e2d5c3] hover:bg-[#f3e9db] transition-all cursor-pointer active:scale-95 disabled:opacity-60"
-                  title="Refresh Wishes"
-                >
-                  <RefreshCw
-                    className={`w-3.5 h-3.5 ${isSyncingSheet ? 'animate-spin text-amber-700' : ''}`}
-                  />
-                </button>
-              </div>
-            </div>
-
-            {/* WISHES CARDS */}
-            {wishes.length === 0 ? (
-              <div className="p-8 rounded-2xl bg-[#fcfaf7] border border-[#dfd2be] text-center space-y-2.5">
-                <div className="w-10 h-10 rounded-full bg-[#f4ebe0] text-[#6e533c] flex items-center justify-center mx-auto border border-[#ded2be]">
-                  <Heart className="w-5 h-5 text-amber-800" />
-                </div>
-                <h4 className="font-serif-luxury font-bold text-stone-800 text-base">
-                  Be the First to Send Blessings
-                </h4>
-                <p className="font-sans-clean text-xs text-stone-500 max-w-xs mx-auto leading-relaxed">
-                  Submit your RSVP to have your congratulations and prayers featured on our wedding wall.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3 max-h-[490px] overflow-y-auto pr-1">
-                {wishes.map((w) => (
-                  <div
-                    key={w.id}
-                    className="p-4 rounded-2xl bg-white border border-[#dfd2be] shadow-xs hover:shadow-md transition-all relative group space-y-2.5"
-                  >
-                    {/* Top Header: Avatar Initials, Name, Timestamp, Love Button */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#f5ede2] to-[#ebe0cf] border border-[#d5c5ad] text-[#554030] flex items-center justify-center font-serif-luxury font-bold text-xs uppercase shadow-2xs">
-                          {w.name.slice(0, 2)}
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-serif-luxury font-bold text-stone-800 leading-tight">
-                            {w.name}
-                          </h4>
-                          <span className="text-[10px] font-sans-clean text-stone-400">
-                            {w.timestamp}
-                          </span>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleLikeWish(w.id)}
-                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#faf5ee] hover:bg-[#f3e9db] text-amber-800 text-xs transition-colors cursor-pointer border border-[#e8ddcb]"
-                        title="Send love"
-                      >
-                        <Heart className="w-3 h-3 fill-amber-500 text-amber-700" />
-                        <span className="text-[11px] font-sans-clean font-medium">
-                          {wishLikes[w.id] || 0}
-                        </span>
-                      </button>
-                    </div>
-
-                    {/* Badges: Attendance & Theme Verification */}
-                    <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
-                      {w.attending === 'yes' ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#f7f0e6] text-[#634b37] border border-[#dfd2be] font-serif-luxury font-medium">
-                          <Users className="w-2.5 h-2.5 text-amber-800" />
-                          <span>
-                            {w.guestCount && w.guestCount > 1
-                              ? `${w.guestCount} Guests &bull; Joyfully Attending`
-                              : 'Joyfully Attending'}
-                          </span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200 font-serif-luxury">
-                          <Heart className="w-2.5 h-2.5 text-stone-400" />
-                          <span>Warm Prayers Sent</span>
-                        </span>
-                      )}
-
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#faf7f2] text-[#6d5642] border border-[#e6ddd0] font-serif-luxury">
-                        <Palette className="w-2.5 h-2.5 text-amber-700" />
-                        <span>White &amp; Beige Theme</span>
-                      </span>
-                    </div>
-
-                    {/* Blessing Quote Body */}
-                    <div className="pt-0.5">
-                      <p className="text-xs sm:text-sm font-sans-clean text-stone-700 leading-relaxed italic bg-[#fcfaf7] px-3.5 py-2.5 rounded-xl border border-[#eee4d6]">
-                        &ldquo;{w.message}&rdquo;
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 7: WISHING WELL & REGISTRY */}
-      <section className="p-8 sm:p-10 rounded-3xl bg-gradient-to-tr from-[#faf6ee] via-white to-[#f5eee2] border border-[#ded2be] text-center max-w-2xl mx-auto space-y-4 shadow-xs">
-        <div className="w-12 h-12 rounded-full bg-[#f4ece0] text-amber-800 flex items-center justify-center mx-auto border border-[#ded2be]">
+      {/* SECTION 6: WISHING WELL & REGISTRY */}
+      <section id="wishing-well" className="p-8 sm:p-10 rounded-3xl bg-gradient-to-tr from-[#FFF9F5] via-[#F8EEF2] to-[#FFF9F5] border border-[#E8C0D0] text-center max-w-2xl mx-auto space-y-4 shadow-xs">
+        <div className="w-12 h-12 rounded-full bg-[#F8EEF2] text-[#A87888] flex items-center justify-center mx-auto border border-[#E8C0D0]">
           <Gift className="w-6 h-6" />
         </div>
-        <h3 className="text-2xl font-serif-luxury font-bold text-stone-900">
+        <h3 className="text-2xl font-serif-luxury font-bold text-[#8F6875]">
           The Wishing Well
         </h3>
-        <p className="text-xs sm:text-sm font-sans-clean text-stone-600 leading-relaxed">
+        <p className="text-xs sm:text-sm font-sans-clean text-[#8F6875]/85 leading-relaxed">
           Your warm presence and heartfelt prayers on our wedding day are the greatest gift of all. Should you wish to bless us with a token of love, a wishing well will be placed at the reception to help us build our new home together.
         </p>
-        <div className="pt-2 text-xs font-serif-luxury italic text-[#7b6552]">
+        <div className="pt-2 text-xs font-serif-luxury italic text-[#A87888]">
           With all our love and gratitude, {config.brideName} &amp; {config.groomName}
         </div>
       </section>
 
       {/* FOOTER ACTIONS */}
-      <footer className="pt-12 border-t border-[#dfd2be]/70 text-center space-y-6">
+      <footer className="pt-12 border-t border-[#E8C0D0]/70 text-center space-y-6">
         <div className="flex flex-wrap items-center justify-center gap-4">
           <button
             type="button"
             onClick={onReplayEnvelope}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white hover:bg-[#faf5ee] border border-[#d8c9b2] text-stone-700 text-xs font-serif-luxury uppercase tracking-wider transition-all shadow-xs hover:scale-105 active:scale-95 cursor-pointer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#FFF9F5] hover:bg-[#F8EEF2] border border-[#D8BFA5] text-[#8F6875] text-xs font-serif-luxury uppercase tracking-wider transition-all shadow-xs hover:scale-105 active:scale-95 cursor-pointer"
           >
-            <RotateCcw className="w-3.5 h-3.5 text-amber-700" />
+            <RotateCcw className="w-3.5 h-3.5 text-[#A87888]" />
             Fold Back Letter &bull; Replay Opening
           </button>
         </div>
 
-        <p className="text-xs font-serif-luxury text-stone-500 tracking-wider">
+        <p className="text-xs font-serif-luxury text-[#8F6875]/70 tracking-wider">
           Crafted with love &bull; White &amp; Beige Wedding Celebration &bull; Islamabad 2026
         </p>
       </footer>

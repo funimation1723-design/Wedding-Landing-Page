@@ -1,6 +1,6 @@
 {
   "name": "Sakura Wedding Invitation",
-  "description": "An elegant white and beige themed wedding invitation featuring an interactive wax-seal envelope reveal, side-by-side couple portraits, themed dressing guide, countdown to 17-Oct at Domeera Marquee Islamabad, and interactive RSVP.",
+  "description": "An elegant white and beige themed wedding invitation featuring an interactive wax-seal envelope reveal, side-by-side couple portraits, themed dressing guide, countdown to 17-Oct at Domeera Marquee Islamabad, and wishing well.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

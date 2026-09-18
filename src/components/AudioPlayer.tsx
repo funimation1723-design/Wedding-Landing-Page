@@ -140,27 +140,27 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ autoPlayTrigger }) => 
         id="wedding-music-toggle"
         onClick={toggleMusic}
         aria-label={isPlaying ? 'Mute romantic wedding music' : 'Play romantic wedding music'}
-        className="group flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-white/90 backdrop-blur-md border border-pink-200/80 shadow-lg shadow-pink-200/30 text-[#831843] hover:bg-pink-50 transition-all duration-300 hover:scale-105 active:scale-95"
+        className="group flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-[#FFF9F5]/90 backdrop-blur-md border border-[#E8C0D0] shadow-lg shadow-[#8F6875]/15 text-[#8F6875] hover:bg-[#F8EEF2] transition-all duration-300 hover:scale-105 active:scale-95"
       >
-        <span className="relative flex items-center justify-center w-6 h-6 rounded-full bg-pink-100 text-pink-600">
+        <span className="relative flex items-center justify-center w-6 h-6 rounded-full bg-[#F8EEF2] text-[#A87888]">
           {isPlaying ? (
             <Volume2 className="w-3.5 h-3.5 animate-pulse" />
           ) : (
-            <VolumeX className="w-3.5 h-3.5 text-pink-400" />
+            <VolumeX className="w-3.5 h-3.5 text-[#A87888]/70" />
           )}
         </span>
 
-        <span className="text-xs font-serif-luxury font-medium tracking-wide text-pink-900 hidden sm:inline">
+        <span className="text-xs font-serif-luxury font-medium tracking-wide text-[#8F6875] hidden sm:inline">
           {isPlaying ? 'Melody Playing' : 'Play Music'}
         </span>
 
         {/* Dancing audio wave indicator */}
         {isPlaying && (
           <div className="flex items-end gap-0.5 h-3.5 px-0.5">
-            <span className="w-0.5 bg-pink-500 rounded-full animate-[bounce_1s_infinite_100ms] h-2"></span>
-            <span className="w-0.5 bg-pink-600 rounded-full animate-[bounce_1s_infinite_300ms] h-3.5"></span>
-            <span className="w-0.5 bg-pink-400 rounded-full animate-[bounce_1s_infinite_200ms] h-2.5"></span>
-            <span className="w-0.5 bg-pink-500 rounded-full animate-[bounce_1s_infinite_400ms] h-3"></span>
+            <span className="w-0.5 bg-[#A87888] rounded-full animate-[bounce_1s_infinite_100ms] h-2"></span>
+            <span className="w-0.5 bg-[#8F6875] rounded-full animate-[bounce_1s_infinite_300ms] h-3.5"></span>
+            <span className="w-0.5 bg-[#E8C0D0] rounded-full animate-[bounce_1s_infinite_200ms] h-2.5"></span>
+            <span className="w-0.5 bg-[#D8BFA5] rounded-full animate-[bounce_1s_infinite_400ms] h-3"></span>
           </div>
         )}
       </button>

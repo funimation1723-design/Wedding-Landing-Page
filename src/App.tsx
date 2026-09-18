@@ -80,25 +80,25 @@ export default function App() {
 
   return (
     <main
-      className={`relative w-full text-[#3d2f24] selection:bg-[#eadecc] selection:text-[#36271a] font-sans-clean ${
+      className={`relative w-full text-[#8F6875] selection:bg-[#E8C0D0] selection:text-[#8F6875] font-sans-clean bg-[#EFD4E4] ${
         isOpen ? 'min-h-[100dvh] overflow-x-hidden' : 'h-[100dvh] overflow-hidden'
       }`}
     >
-      {/* LUXURY WHITE & BEIGE MARQUEE FLORAL WALLPAPER WITH WARM BLUR */}
+      {/* SOFT BLUSH PASTEL FLORAL CANOPY BACKDROP WITH FROSTED TEXTURE */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        {/* High-resolution romantic white floral canopy backdrop */}
+        {/* Romantic floral garden archway backdrop */}
         <img
           src="https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&w=2000&q=85"
-          alt="White and Warm Beige Wedding Decor Canopy"
+          alt="Romantic Soft Blush and Ivory Wedding Decor Canopy"
           referrerPolicy="no-referrer"
-          className="w-full h-full object-cover scale-105 filter blur-[6px] brightness-[0.98] transition-transform duration-1000 ease-out"
+          className="w-full h-full object-cover scale-105 filter blur-[8px] opacity-35 transition-transform duration-1000 ease-out"
         />
 
-        {/* Soft frosted glass warm white and beige overlay for high legibility */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#faf7f2]/90 via-[#f4eee6]/80 to-[#faf7f2]/95 backdrop-blur-[6px]" />
+        {/* Soft Blush Pink (#EFD4E4) & Ivory Pink (#F8EEF2) overlay for luxurious washed powdery look */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#EFD4E4]/95 via-[#F8EEF2]/90 to-[#EFD4E4]/95 backdrop-blur-[8px]" />
 
-        {/* Subtle radial glow centering warm golden light on the stationery card */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(255,255,255,0.85)_0%,_rgba(248,243,235,0.65)_60%,_rgba(230,220,205,0.4)_100%)]" />
+        {/* Subtle radial glow centering soft warm ivory and champagne light */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(255,249,245,0.85)_0%,_rgba(248,238,242,0.65)_50%,_rgba(224,202,223,0.5)_100%)]" />
       </div>
 
       {/* Floating Canvas Falling Sakura Petals drifting over the blurred tree wallpaper */}
