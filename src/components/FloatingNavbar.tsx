@@ -30,7 +30,7 @@ export const FloatingNavbar: React.FC<FloatingNavbarProps> = ({
         <span className="w-6 h-6 rounded-full bg-[#F8EEF2] border border-[#D8BFA5] flex items-center justify-center text-[#A87888]">
           <Heart className="w-3 h-3 fill-[#E8C0D0] text-[#A87888]" />
         </span>
-        <span className="tracking-widest hidden sm:inline">WEDDING</span>
+        <span className="tracking-widest hidden sm:inline">NIKKAH</span>
       </button>
 
       {/* Nav Jump Links */}

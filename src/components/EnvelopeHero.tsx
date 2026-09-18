@@ -93,7 +93,7 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
           >
             <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#FFF9F5]/95 backdrop-blur-md border border-[#E8C0D0] text-[#8F6875] text-[10px] xs:text-xs font-serif-luxury tracking-widest uppercase shadow-xs">
               <Sparkles className="w-3 h-3 text-[#A87888]" />
-              The Wedding Celebration
+              The Sacred Nikah Ceremony
               <Sparkles className="w-3 h-3 text-[#A87888]" />
             </span>
 
@@ -116,7 +116,7 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
           >
             <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#FFF9F5]/95 backdrop-blur-md border border-[#E8C0D0] text-[#8F6875] text-[10px] xs:text-xs font-serif-luxury tracking-widest uppercase shadow-xs">
               <Sparkles className="w-3 h-3 text-[#A87888]" />
-              The Wedding Invitation
+              The Nikah Invitation
               <Sparkles className="w-3 h-3 text-[#A87888]" />
             </span>
 
@@ -267,7 +267,7 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
                 17-Oct &bull; {config.date}
               </p>
               <p className="text-[9px] xs:text-[10px] font-sans-clean font-semibold text-[#A87888]">
-                Ceremony &amp; Reception at {config.ceremonyTime}
+                Nikah Ceremony at {config.ceremonyTime}
               </p>
             </div>
 
@@ -297,7 +297,7 @@ export const EnvelopeHero: React.FC<EnvelopeHeroProps> = ({
                 }}
                 className="group inline-flex items-center justify-center gap-2 w-full py-1.5 sm:py-2 rounded-full bg-gradient-to-r from-[#F8EEF2] via-[#FFF9F5] to-[#F8EEF2] hover:from-[#E8C0D0] hover:to-[#E8C0D0] text-[10px] xs:text-xs font-serif-luxury tracking-widest uppercase text-[#8F6875] transition-all border border-[#D8BFA5] shadow-xs hover:shadow-md cursor-pointer"
               >
-                <span>View Full Itinerary &amp; Details</span>
+                <span>View Nikah Itinerary &amp; Details</span>
                 <ChevronDown className="w-3.5 h-3.5 animate-bounce text-[#A87888]" />
               </button>
             ) : (

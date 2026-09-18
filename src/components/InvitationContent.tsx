@@ -98,9 +98,9 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
   };
 
   const handleAddToCalendar = () => {
-    const title = encodeURIComponent(`${config.brideName} & ${config.groomName}'s Wedding`);
+    const title = encodeURIComponent(`${config.brideName} & ${config.groomName}'s Nikah Ceremony`);
     const details = encodeURIComponent(
-      `Join us in celebrating the wedding ceremony of ${config.brideName} & ${config.groomName} at ${config.venueName}. Attire: White & Beige.`
+      `Join us in celebrating the sacred Nikah ceremony of ${config.brideName} & ${config.groomName} at ${config.venueName}. Attire: White & Beige.`
     );
     const location = encodeURIComponent(`${config.venueName}, ${config.venueAddress}`);
     // 2026-10-17 15:00 PKT (10:00 UTC) to 19:00 UTC
@@ -108,47 +108,39 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
     window.open(googleCalendarUrl, '_blank');
   };
 
-  // Schedule Timeline
+  // Schedule Timeline - Pure Nikah Function
   const schedule: ScheduleEvent[] = [
     {
       time: '3:00 PM',
       title: 'Guest Arrival & Welcome',
       subtitle: 'Traditional Refreshments & Hospitality',
-      description: 'Warm reception of beloved family and guests at Domeera Marquee with chilled beverages and soothing acoustic melodies.',
+      description: 'Warm reception of beloved family and guests at Domeera Marquee with chilled welcome beverages and soothing acoustic melodies.',
       iconName: 'wine',
       location: 'Reception Foyer & Veranda',
     },
     {
       time: '3:45 PM',
-      title: 'Baraat Arrival & Grand Reception',
-      subtitle: 'Welcoming the Groom & Family',
-      description: 'Joyous arrival of the groom and family welcomed with fragrant rose and jasmine petal showers.',
-      iconName: 'sparkles',
-      location: 'Grand Marquee Entrance',
+      title: 'The Solemnization of Nikah',
+      subtitle: 'Khutbah-e-Nikah & Sacred Vows',
+      description: 'Recitation of Khutbah-e-Nikah and signing of the marriage contract in the presence of respected witnesses, cherished elders, and loved ones.',
+      iconName: 'church',
+      location: 'Main Floral Stage',
     },
     {
       time: '4:30 PM',
-      title: 'The Wedding Ceremony & Nikah',
-      subtitle: 'Sacred Covenant & Exchange of Vows',
-      description: 'In the presence of cherished elders and dear loved ones, solemnizing the holy union of two hearts.',
-      iconName: 'church',
-      location: 'Main Floral Stage',
+      title: 'Dua & Mubarakbaad',
+      subtitle: 'Distribution of Bidder & Family Portraits',
+      description: 'Collective prayers for the couple’s lifelong blessings and happiness, accompanied by the traditional distribution of celebratory sweets.',
+      iconName: 'heart',
+      location: 'Central Stage & Courtyard',
     },
     {
       time: '5:15 PM',
       title: 'Royal Banquet & Dinner Feast',
       subtitle: 'Traditional Gourmet Buffet & Delicacies',
-      description: 'An opulent culinary banquet featuring traditional Mughlai specialties, live bread stations, and artisanal desserts.',
+      description: 'An opulent culinary banquet featuring traditional Mughlai specialties, live naan stations, and artisanal desserts.',
       iconName: 'utensils',
       location: 'The Grand Dining Hall',
-    },
-    {
-      time: '6:30 PM',
-      title: 'Rukhsati & Farewell Blessings',
-      subtitle: 'Heartfelt Prayers & Send-Off',
-      description: 'Prayers of prosperity and love as the newlyweds embark on their blessed journey together.',
-      iconName: 'heart',
-      location: 'Marquee Portico',
     },
   ];
 
@@ -280,7 +272,7 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
             Order of Events
           </span>
           <h2 className="text-3xl sm:text-4xl font-serif-luxury font-bold text-stone-900">
-            The Wedding Day Itinerary
+            The Nikah Day Itinerary
           </h2>
           <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-[#bfa88b] to-transparent mx-auto" />
           <p className="text-sm font-sans-clean text-stone-600 max-w-lg mx-auto">
@@ -597,7 +589,7 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
           The Wishing Well
         </h3>
         <p className="text-xs sm:text-sm font-sans-clean text-[#8F6875]/85 leading-relaxed">
-          Your warm presence and heartfelt prayers on our wedding day are the greatest gift of all. Should you wish to bless us with a token of love, a wishing well will be placed at the reception to help us build our new home together.
+          Your warm presence and heartfelt prayers on our Nikah ceremony are the greatest gift of all. Should you wish to bless us with a token of love, a wishing well will be placed at the reception to help us build our new home together.
         </p>
         <div className="pt-2 text-xs font-serif-luxury italic text-[#A87888]">
           With all our love and gratitude, {config.brideName} &amp; {config.groomName}
@@ -618,7 +610,7 @@ export const InvitationContent: React.FC<InvitationContentProps> = ({
         </div>
 
         <p className="text-xs font-serif-luxury text-[#8F6875]/70 tracking-wider">
-          Crafted with love &bull; White &amp; Beige Wedding Celebration &bull; Islamabad 2026
+          Crafted with love &bull; White &amp; Beige Nikah Celebration &bull; Islamabad 2026
         </p>
       </footer>
     </div>
